@@ -155,7 +155,7 @@ Grenzen der Beobachtung:
 | Automation schreiben | REST `POST` bzw. `DELETE /api/config/automation/config/{id}` (`EditAutomationConfigView`): validiert, schreibt `automations.yaml`, ruft `automation.reload` mit `{"id": ...}` (lädt nur diese eine Automation neu); beim Löschen wird der Registry-Eintrag entfernt. | **Abweichung:** Es gibt weder eine Python-API noch ein WebSocket-Kommando. Der View serialisiert Schreibzugriffe über einen eigenen `mutation_lock`, an den eine Integration nicht herankommt. Siehe „Offen für M1“. |
 | Templates prüfen | `Template(template, hass)`, dann `ensure_valid()` für die Syntax und `async_render(variables, parse_result, limited, strict, log_fn)` | Bestätigt. `hass` ist Pflichtargument. `strict=True` macht undefinierte Variablen zu Fehlern. |
 | Dashboards | WebSocket `lovelace/config`, `lovelace/config/save`, `lovelace/config/delete`, `lovelace/info` (Speichern und Löschen nur für Administratoren). In Python: `hass.data[LOVELACE_DATA].dashboards[url_path]` mit `mode`, `async_load(force)`, `async_save(config)`. | Bestätigt. YAML-Dashboards haben `mode == "yaml"` und lehnen `async_save` ab. |
-| Modellaufruf | Dienst `ai_task.generate_data` (`task_name`, `instructions`, `entity_id`, `structure`, `attachments`) bzw. in Python `ai_task.async_generate_data(hass, task_name=, entity_id=, instructions=, structure=)` mit Ergebnis `GenDataTaskResult.data` | **Abweichung:** `structure` ist kein JSON-Schema, sondern ein Feld-Dict `{name: {selector, description, required}}`, aus dem HA ein Schema aus Selektoren baut. Siehe „Offen für M1“. |
+| Modellaufruf | Dienst `ai_task.generate_data` (`task_name`, `instructions`, `entity_id`, `structure`, `attachments`) bzw. in Python `ai_task.async_generate_data(hass, task_name=, entity_id=, instructions=, structure=)` mit Ergebnis `GenDataTaskResult.data` | **Abweichung:** `structure` ist kein JSON-Schema. Der Dienst nimmt ein Feld-Dict `{name: {selector, description, required}}`, die Python-Funktion direkt ein Schema aus Selektoren. Siehe „Offen für M1“. |
 
 ### Weitere Befunde
 
@@ -168,7 +168,7 @@ Grenzen der Beobachtung:
 ### Offen für M1
 
 - **Automationen schreiben.** Zwei Wege: (a) Das Backend schreibt `automations.yaml` selbst mit denselben Lese- und Schreibhelfern wie der View und ruft danach `automation.reload` mit der ID auf. Eigenes Lock, Restrisiko bei gleichzeitiger Bearbeitung im HA-Editor. (b) Das Backend ruft den REST-Endpunkt der eigenen Instanz auf und nutzt damit Validierung, Lock und Reload des Views. **Entschieden (18.11.2026): (a)**, weil Schnappschuss und Schreiben dann in einer Hand liegen; den Schnappschuss unmittelbar vor dem Schreiben unter dem eigenen Lock ziehen.
-- **Strukturierte Ausgabe über AI Task.** Verschachtelung geht nur über den `object`-Selektor mit `fields` und `multiple`. Frei geformte Teile wie die Automation-Konfiguration in `after` lassen sich nur als untypisiertes Objekt beschreiben. Ob Modelle damit zuverlässig Change Sets liefern, ist in M1 als Erstes zu testen. Rückfall bleibt der eigene OpenAI-kompatible Client mit echtem JSON-Schema.
+- **Strukturierte Ausgabe über AI Task.** Verschachtelung geht nur über den `object`-Selektor mit `fields` und `multiple`. Jede AI-Task-Entität wandelt das Schema selbst in das Format ihres Anbieters um. Die OpenAI-Integration verlangt dabei ausdrücklich definierte Felder und lehnt ein frei geformtes Objekt ab. Die Automation in `after` reist deshalb über AI Task als JSON-Text in einem Textfeld. Das besteht die Schemaprüfung der OpenAI-Integration. Ob Modelle in einem Textfeld zuverlässig gültiges JSON schreiben, ist offen und nur mit einem echten Modell zu klären. AI Task kennt außerdem keine Trennung von System- und Nutzertext und keine Temperatur. Der eigene OpenAI-kompatible Client schickt ein echtes JSON-Schema.
 
 Bekannte Einschränkung: Automationen und Dashboards im YAML-Modus (Pakete, `!include`) können nicht über die UI-Schnittstellen geschrieben werden. Sie werden gelesen, in das Netz überführt und in Konfliktanalyse und Domänenansicht berücksichtigt.
 
@@ -197,7 +197,7 @@ Bekannte Einschränkung: Automationen und Dashboards im YAML-Modus (Pakete, `!in
 custom_components/ai_drafts/
   __init__.py  manifest.json  config_flow.py  const.py
   websocket.py  context.py  drafting.py  changeset.py
-  apply.py  journal.py
+  apply.py  journal.py  pipeline.py  data.py
   net/  model.py  translate.py  merge.py  export.py
   checks/  validity.py  plausibility.py  conflicts.py
   schemas/  automation.json  dashboard.json
@@ -209,6 +209,7 @@ frontend/
   package.json  (Lit, TypeScript, Vite oder Rollup)
 tests/  conftest.py  fixtures/  test_*.py
 eval/  cases/  run_eval.py
+scripts/  setup  develop  lint  fake_model.py
 .devcontainer/  .github/workflows/  hacs.json  PLAN.md  README.md
 ```
 
@@ -450,12 +451,82 @@ Vor M1:
 2. Den Devcontainer einmal öffnen.
 3. Die noch offenen Punkte in Abschnitt 10 entscheiden.
 
-M1:
+M1 läuft. Der Stand steht in Abschnitt 14.
 
-1. Strukturierte Ausgabe über AI Task mit dem Selektor-Schema erproben und danach zwischen AI Task und eigenem Client entscheiden.
-2. `context.py`: Hausmodell aus den Registern und den bestehenden Automationen, Ausschnittwahl mit Obergrenze.
-3. `drafting.py`: Modellaufruf, Ergebnis als Change Set.
-4. `checks/validity.py`: Stufe A, dazu die Reparaturschleife auf `complete_check`, `revise` und `fail`.
-5. `apply.py`: Schreibweg entscheiden (Abschnitt 5, „Offen für M1“), Schnappschuss, Rückgängig.
-6. Ansichten Anfrage und Vorschlag auf echte Daten umstellen, Vorschau als YAML-Diff, samt der WebSocket-Kommandos dafür.
-7. `journal.py` und der Beginn des Eval-Satzes.
+## 14. Stand M1
+
+M1 ist in drei Teile geschnitten. Teil 1 ist fertig, Teil 2 und 3 stehen aus.
+
+| Teil | Inhalt | Stand |
+|---|---|---|
+| 1 | Backend: Kontext, Entwurf mit Reparaturschleife, Prüfungen der Stufe A, Schreiben mit Schnappschuss und Rückgängig, Protokoll, WebSocket-Kommandos | Erledigt |
+| 2 | Frontend: Ansichten Anfrage und Vorschlag auf echten Daten, YAML-Diff | Offen |
+| 3 | Erprobung mit einem echten Modell, Entscheidung zwischen AI Task und eigenem Client, Beginn des Eval-Satzes | Offen, braucht Zugang zu einem Modell |
+
+### Teil 1: was es gibt
+
+- **`context.py`** wählt zur Anfrage einen Ausschnitt des Hauses. Wörter der Anfrage werden gegen Namen, Entity-IDs, Bereiche und Gerätenamen geprüft, auch als Teil zusammengesetzter Wörter („Flurlicht“ findet den Bereich „Flur“). Obergrenzen: 150 Entitäten, 30 Automationen. Deaktivierte und versteckte Entitäten bleiben draußen. Genau dieser Ausschnitt verlässt die Installation.
+- **`drafting.py`** baut die Prompts und ruft das Modell über einen von zwei Wegen: AI Task oder OpenAI-kompatibler Server.
+- **`checks/validity.py`** prüft Stufe A: Schema über die Validierung von Home Assistant, Existenz von Entitäten, Geräten, Bereichen und Aktionen, Pflichtfelder der Aktionen, Syntax der Templates, Kollision von IDs und Aliassen.
+- **`pipeline.py`** führt Kontext, Entwurf und Prüfung zusammen und schickt Fehler für höchstens drei Runden an das Modell zurück. Es läuft immer nur ein Entwurf zugleich.
+- **`apply.py`** schreibt `automations.yaml` und lädt die eine Automation neu. Vorher werden die Prüfungen wiederholt und ein Schnappschuss abgelegt. Kommt die Automation nicht hoch, wird die Datei wiederhergestellt.
+- **`journal.py`** hält je Change Set fest: Anlage, jede Entwurfsrunde mit Modell, Dauer und Kontextgröße, jedes Prüfergebnis, Fehlschlag, Übernehmen, Verwerfen, Rückgängig. Bei Übernehmen und Verwerfen auch, in welcher Ansicht entschieden wurde.
+- **`scripts/fake_model.py`** ist ein Stellvertreter für ein Modell mit festen Antworten, damit sich der ganze Ablauf ohne Modell durchspielen lässt.
+
+WebSocket-Kommandos, alle nur für Administratoren. Dienste gibt es keine; geschrieben wird ausschließlich über `ai_drafts/changesets/apply`.
+
+| Kommando | Zweck |
+|---|---|
+| `ai_drafts/draft` mit `request` | Entwurf erzeugen und prüfen |
+| `ai_drafts/changesets/list`, `ai_drafts/changesets/get` mit `change_set_id` | Change Sets lesen |
+| `ai_drafts/changesets/apply`, `discard`, `revert` mit `change_set_id` | Entscheiden; `apply` und `discard` nehmen zusätzlich `decided_in` und `views_opened` |
+| `ai_drafts/journal/list`, wahlweise mit `change_set_id` | Protokoll lesen |
+| `ai_drafts/info` | Version und Modellquelle |
+
+Fehlercodes: `not_loaded`, `not_found`, `wrong_state`, `apply_blocked`, `apply_failed`, `revert_refused`, `busy`, `model_error`.
+
+### Teil 1: Festlegungen
+
+- **Umfang.** M1 legt nur neue Automationen an. Jede andere Art und jede andere Operation weisen die Prüfungen als Fehler ab.
+- **Schreibweg.** Das Backend schreibt `automations.yaml` selbst, mit denselben Bausteinen und derselben Reihenfolge der Schlüssel wie der Editor von Home Assistant.
+- **ID der Automation.** Nennt das Modell eine ID, wird sie verwendet, sonst wird beim Übernehmen eine erzeugt. Sie steht danach als `target_id` in der Operation.
+- **Rückgängig nur unverändert.** Wurde die Automation nach dem Übernehmen von Hand bearbeitet, wird das Rückgängig verweigert und nichts geändert. Wurde sie schon gelöscht, gilt das Change Set als zurückgenommen.
+- **Dateien mit `!secret` oder `!include` werden nicht angefasst.** Beim Laden werden solche Verweise aufgelöst, beim Schreiben stünde ihr Wert im Klartext in der Datei.
+- **Fehlerhafte Modellausgabe** zählt wie ein Prüffehler und geht in die Reparaturschleife. Ist das Modell nicht erreichbar, endet das Change Set sofort als `failed`.
+- **Ein Absturz einer Prüfung** zählt als Fehler, nie als bestanden.
+
+### Teil 1: geprüft
+
+- **Tests:** 335. Übernehmen und Rückgängig laufen gegen eine echte `automations.yaml` in einem temporären Konfigurationsverzeichnis mit echtem `automation.reload`, nicht gegen Attrappen.
+- **Echte Instanz mit dem Stellvertreter-Modell,** zweimal unabhängig durchgespielt:
+  - Die Flurlicht-Anfrage endet als `checked`. Übernehmen schreibt die Automation in die Datei, die Entität existiert. Rückgängig entfernt Eintrag und Entität.
+  - Ein Entwurf mit erfundener Entität wird in einer Runde repariert.
+  - Ein Entwurf, der die erfundene Entität behält, endet nach drei Runden als `failed` und lässt sich nicht übernehmen.
+  - Nicht parsbare Ausgabe wird in einer Runde repariert.
+- **Nicht geprüft:** jedes echte Modell, und damit der erste Teil der Abnahme von M1. Ebenso der AI-Task-Weg gegen eine echte Entität.
+
+### Teil 1: bekannte Schwächen
+
+Am Schreibweg:
+
+- **Kommentare gehen verloren.** Die Datei wird beim Schreiben neu erzeugt. Der Editor von Home Assistant verhält sich genauso.
+- **Kein gemeinsames Lock mit dem Editor.** Speichert jemand im Editor genau zwischen unserem Lesen und Schreiben, geht diese Änderung verloren. Das Fenster ist sehr kurz, aber nicht null.
+- **„Automation läuft“ heißt nur:** Die Entität existiert und ist nicht `unavailable`. Ob der Auslöser feuert, wird nicht geprüft.
+- **Konfigurationen mit Paketen** sind nicht erprobt.
+
+An den Prüfungen:
+
+- Entity-IDs innerhalb von Templates werden nicht geprüft. Eine fehlende Entität ergibt dort nur `unknown`.
+- Labels und Etagen als Ziel werden nicht geprüft.
+- Aktionsdaten, die ein Template enthalten, werden nicht gegen das Schema der Aktion geprüft.
+- Ob eine Aktion zur Art der Entität passt, wird nicht geprüft. Das gehört zu Stufe B.
+- Templates mit Laufzeitvariablen (`trigger`, `this`, `repeat`, `wait`) werden nur auf Syntax geprüft, nicht gerendert.
+
+An der Auswahl des Ausschnitts:
+
+- Der Abgleich läuft über Wortteile. Kurze Wörter wie „Bad“ können unpassende Entitäten mitziehen.
+
+### Wie es weitergeht
+
+1. Teil 2: Ansichten Anfrage und Vorschlag auf die WebSocket-Kommandos umstellen, YAML-Diff, Durchklicken gegen das Stellvertreter-Modell.
+2. Teil 3: Zugang zu einem echten Modell klären, die Flurlicht-Anfrage damit prüfen, AI Task und eigenen Client vergleichen, Eval-Satz beginnen.

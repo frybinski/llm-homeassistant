@@ -235,7 +235,7 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 |---|---|
 | Installation in der Dev-Instanz | Geprüft. Core 2026.10.4 lokal gestartet, Config Entry über die Config-Flow-API angelegt, Zustand `loaded`. Ein Erststart in frischer Umgebung richtet Demo- und Template-Entitäten ohne Neustart ein. |
 | Panel öffnet | Geprüft in Chromium. Seitenleisteneintrag vorhanden, Panel zeigt die Daten aus `blaupause/info`. Deutsch und Englisch, helles und dunkles Theme, schmale Ansicht mit Menüknopf. |
-| CI grün | **Teilweise.** Im ersten Lauf waren `hassfest`, `ruff`, `pytest` und der Frontend-Build grün. Die HACS-Validierung schlug fehl, weil die HACS-Action private Repos grundsätzlich ablehnt. Der Job wird seitdem übersprungen, solange das Repo privat ist. Die HACS-Validierung ist damit noch nie gelaufen. |
+| CI grün | Geprüft. Im ersten Lauf lehnte die HACS-Action das damals private Repo ab. Seit das Repo öffentlich ist, sind alle fünf Jobs grün: `hassfest`, HACS, `ruff`, `pytest` und der Frontend-Build. Bei HACS sind die Prüfungen `description` und `topics` ausgenommen. |
 | Devcontainer | **Nicht geprüft.** Er lässt sich in der Sitzungsumgebung nicht starten. Geprüft ist nur, dass das Image `mcr.microsoft.com/devcontainers/python:3.14` existiert und dass `scripts/setup` und `scripts/develop` außerhalb des Containers funktionieren. |
 
 ### Festlegungen dieser Sitzung
@@ -260,11 +260,10 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 
 ### Bekannte Punkte
 
-- **HACS:** Ungeprüft, solange das Repo privat ist (siehe Abnahme). Sobald es öffentlich ist, läuft der Job von selbst. Außerdem sind die Prüfungen `description` und `topics` im Workflow ausgenommen, weil beides in den GitHub-Einstellungen des Repos fehlt. Vor dem HACS-Release setzen und die Ausnahme entfernen.
+- **HACS:** Die Prüfungen `description` und `topics` sind im Workflow ausgenommen, weil beides in den GitHub-Einstellungen des Repos fehlt. Vor dem HACS-Release setzen und die Ausnahme entfernen. Der HACS-Job läuft nur bei öffentlichem Repo, weil die Action private Repos ablehnt.
 - **Icon:** `brand/icon.png` ist ein Platzhalter.
 - **Cache des Bundles:** Es wird mit `?v=<Version>` und langen Cache-Headern ausgeliefert. Wer am Panel entwickelt, ohne die Version zu erhöhen, bekommt im Browser das alte Bundle. In M1 auf einen Inhalts-Hash umstellen.
 - **`libturbojpeg`:** Die Dev-Instanz protokolliert beim Start einen Fehler mit Traceback, weil die Systembibliothek fehlt. Betroffen sind nur Kamera-Schnappschüsse der Demo. Im Devcontainer ließe sich `libturbojpeg0` nachinstallieren.
-- **`npm audit`:** meldet eine ReDoS-Lücke in `picomatch`, das über Vite hereinkommt. Betroffen ist nur das Build-Werkzeug, nicht das ausgelieferte Bundle. Die angebotene Korrektur wäre ein Rückschritt auf Vite 6.
 - **Speicher:** Change Sets werden unbegrenzt aufbewahrt. Die Aufbewahrung ist mit dem Protokoll (`journal`) zu klären.
 
 ### Nächste Schritte (M1)

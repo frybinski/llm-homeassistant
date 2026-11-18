@@ -282,9 +282,9 @@ Diese Punkte sind bei der Durchsicht am 18.11.2026 aufgefallen. Wo nichts andere
 | Netzklasse | Abschnitt 4 spricht von Workflow-Netzen, die Tabelle oben von Stellen-Transitions-Netzen. Das über Entitäten verbundene Gesamtnetz hat keine einzelne Quelle und Senke und ist damit kein Workflow-Netz. | Je Ebene benennen: Ablauf einer einzelnen Automation, Gesamtnetz über die Zustandsstellen. |
 | Lücken der Abbildung | Die Tabelle in Abschnitt 4 deckt drei Dinge nicht ab: Umwege über Skripte und Szenen, Ziele über Bereich, Label oder Gerät, die erst zur Laufzeit aufgelöst werden, und abgeleitete Zustände (Gruppen, Template-Entitäten). Auslöseketten, die darüber laufen, bleiben sonst unsichtbar. Die Flur-Entitäten der Dev-Instanz sind selbst Template-Entitäten. | In M2 als eigene Fälle in die Abbildung und in die Übersetzungstests aufnehmen. |
 | Leitprinzip 4 | „Prüfung und Darstellung arbeiten auf demselben Netz“ gilt für Stufe C und die Domänenansicht. Stufe A und B arbeiten laut Abschnitt 6 auf der Konfiguration, und in M1 gibt es noch kein Netz. | Formulierung an Abschnitt 1 angleichen: Konfliktanalyse und Domänenansicht. |
-| Ablage der Beispieldaten | Sie liegen laut Plan in `frontend/src/demo`, sollen aber auch Python-Tests dienen. | Als JSON-Dateien an einer Stelle ablegen, die Frontend und `pytest` beide lesen. Schon in M0 ein Test, der den Beispielvorschlag durch `ChangeSet.from_dict` schickt. |
-| Schweregrad im Beispiel | Der Beispielvorschlag soll trotz Konfliktbefund bis zum Übernehmen durchklickbar sein. Ein Befund der Stufe `error` sperrt das Übernehmen. | Den Konfliktbefund im Beispiel als `warning` führen. Das passt zu Abschnitt 11. |
-| Demo-Kennzeichnung | Zwischen M1 und M3 zeigen zwei Ansichten echte Daten und zwei Beispieldaten. | Kennzeichnung je Ansicht statt einmal für das Panel. |
+| Ablage der Beispieldaten | Sie liegen laut Plan in `frontend/src/demo`, sollen aber auch Python-Tests dienen. | **Umgesetzt:** JSON-Dateien in `frontend/src/demo`, die das Frontend beim Bau einbindet und `pytest` direkt liest. Ein Test schickt alle Beispiel-Change-Sets durch `ChangeSet.from_dict`. |
+| Schweregrad im Beispiel | Der Beispielvorschlag soll trotz Konfliktbefund bis zum Übernehmen durchklickbar sein. Ein Befund der Stufe `error` sperrt das Übernehmen. | **Umgesetzt:** Der Konfliktbefund im Beispiel ist eine `warning`. |
+| Demo-Kennzeichnung | Zwischen M1 und M3 zeigen zwei Ansichten echte Daten und zwei Beispieldaten. | **Umgesetzt:** Jede Ansicht trägt ihren eigenen Hinweis. |
 | Größe von `elkjs` | `elkjs` 0.12.1 misst 1,65 MB minifiziert und 480 kB gzip-komprimiert. Das heutige Bundle hat 24 kB. Das Bundle ist eingecheckt. | **Entschieden (18.11.2026):** kein `elkjs` im Schaukasten. Das Bundle bleibt klein, eine Datei und eingecheckt. Erneut prüfen in M3, wenn echte Installationen dargestellt werden. |
 | Abzug einer echten Instanz | Die Abnahme von M2 braucht einen anonymisierten Abzug. Das Repo ist öffentlich. | Abzug nicht ins Repo legen, solange kein Anonymisierungsskript existiert und geprüft ist. Ablageort festlegen. |
 | „In welcher Ansicht entschieden“ | Wer beide Ansichten öffnet, hat nicht in einer entschieden. Ohne Zuteilung wählen Nutzer die Ansicht selbst, was den Vergleich verzerrt. | Festhalten, welche Ansichten geöffnet waren und welche bei der Entscheidung aktiv war. Für einen belastbaren Vergleich die Startansicht zuteilen. |
@@ -303,13 +303,13 @@ Diese Punkte sind bei der Durchsicht am 18.11.2026 aufgefallen. Wo nichts andere
 ## 12. Auftrag für die erste Sitzung
 
 1. `PLAN.md` lesen. Abschnitt 5 gegen die aktuelle HA-Entwicklerdokumentation prüfen und Abweichungen hier eintragen. **Erledigt.**
-2. M0 umsetzen: Gerüst, Devcontainer, CI, Panel mit den vier Ansichten und dem Beispielszenario. **Teilweise.** Gerüst, Devcontainer und CI stehen. Das Panel mit den vier Ansichten und dem Beispielszenario fehlt.
-3. Beispieldaten in der Form von Change Set und Netz anlegen, sodass sie später als Fixtures dienen. **Offen.**
-4. Am Ende Stand, Bildschirmfotos der vier Ansichten und nächste Schritte in `PLAN.md` nachtragen. **Teilweise.** Stand und nächste Schritte stehen in Abschnitt 13. Bildschirmfotos fehlen, weil es die Ansichten noch nicht gibt.
+2. M0 umsetzen: Gerüst, Devcontainer, CI, Panel mit den vier Ansichten und dem Beispielszenario. **Erledigt.** Der Devcontainer ist gebaut, aber nicht geprüft (Abschnitt 13).
+3. Beispieldaten in der Form von Change Set und Netz anlegen, sodass sie später als Fixtures dienen. **Erledigt**, im vorläufigen Netzformat Version 0.
+4. Am Ende Stand, Bildschirmfotos der vier Ansichten und nächste Schritte in `PLAN.md` nachtragen. **Erledigt** (Abschnitt 13).
 
 ## 13. Stand nach Sitzung 1 (18.11.2026)
 
-M0 nach Fassung 2 ist nicht abgeschlossen. Das Gerüst steht, der Schaukasten fehlt. Die Sitzung lief gegen Fassung 1; Fassung 2 kam am Ende dazu.
+M0 ist umgesetzt. Offen ist allein die Prüfung des Devcontainers, die in der Sitzungsumgebung nicht möglich war.
 
 ### Erledigt
 
@@ -317,20 +317,48 @@ M0 nach Fassung 2 ist nicht abgeschlossen. Das Gerüst steht, der Schaukasten fe
 - **Gerüst:**
   - Die Integration lädt über einen Config Entry.
   - Der Config Flow bietet ein Menü mit „AI Task“ und „OpenAI-kompatibler Server“. Beide Schritte sagen vor der Entscheidung, welche Daten an das Modell gehen.
-  - Das Panel steht nur für Administratoren in der Seitenleiste. Es zeigt Version und Modellquelle, sonst nichts.
+  - Das Panel steht nur für Administratoren in der Seitenleiste.
   - WebSocket-Kommandos `ai_drafts/info` und `ai_drafts/changesets/list`, beide nur für Administratoren. Der API-Schlüssel wird nie zurückgegeben.
   - Dev-Instanz (`config/configuration.yaml`) mit Demo-Integration und Template-Entitäten für das Flur-Szenario: `binary_sensor.flur_bewegungsmelder` und `light.flurlicht`, gesteuert über zwei `input_boolean`.
   - Devcontainer, Skripte (`scripts/setup`, `develop`, `lint`), CI.
-- **Change Set** (`changeset.py`): Datenmodell nach Fassung 1 von Abschnitt 3, Zustandsautomat, Speicherung über den HA-Store.
-- **Tests:** 119, davon decken 36 parametrisierte Fälle jede Kombination aus Zustand und Methode ab.
+- **Change Set** (`changeset.py`): Datenmodell nach Abschnitt 3 einschließlich `net_refs`, Zustandsautomat, Speicherung über den HA-Store.
+- **Schaukasten:**
+  - Vier Ansichten im Panel: Anfrage und Verlauf, Vorschlag und Befunde, Domänenansicht, Bestand. Jede trägt den Hinweis, dass sie Beispieldaten zeigt und nichts geschrieben wird.
+  - Beispieldaten in `frontend/src/demo`: ein Haus mit Flur, Wohnzimmer und Küche, vier Automationen im echten HA-Format, ein vorbereiteter Vorschlag mit einer Konfliktwarnung, drei ältere Change Sets für den Verlauf, dazu das Netz des Bestands und das Netzfragment des Vorschlags.
+  - Der Vorschlag ist die Anfrage aus der M1-Abnahme. Er kollidiert mit der bestehenden „Nachtruhe im Flur“, die das Flurlicht nach 23 Uhr sofort wieder ausschaltet.
+  - Die Domänenansicht und die Abhängigkeiten im Bestand werden aus dem Netz und seinen Herkunftsverweisen abgeleitet, nicht aus den Automationen. Nur die Namen der Automationen kommen aus deren Konfiguration, weil das Netz sie nicht trägt.
+  - Die Domänenansicht lässt sich auf das Netz umschalten: ein Diagramm je Automation, gemeinsame Zustandsstellen stehen in jedem Diagramm, das sie nutzt.
+  - Übernehmen, Verwerfen und Rückgängig ändern den Status nur im Browser und folgen dabei derselben Übergangstabelle wie `changeset.py`.
+  - Die Adresse des Bundles hängt jetzt an einem Hash seines Inhalts. Ein neu gebautes Bundle wird damit nach dem Neuladen der Integration ausgeliefert.
+- **Tests:** 152. Darunter laufen alle Beispiel-Change-Sets durch das echte Modell, das Netz wird auf Stimmigkeit geprüft (eindeutige IDs, Kanten nur zwischen Stelle und Transition, alle `net_refs` und Herkunftsverweise lösen auf), und die fünf Automationen bestehen die Validierung von Home Assistant.
+
+### Bildschirmfotos
+
+Deutsche Oberfläche, helles Theme, aufgenommen in einer laufenden Instanz von Core 2026.10.4.
+
+**Anfrage und Verlauf**
+
+![Anfrage und Verlauf](docs/screenshots/request.png)
+
+**Vorschlag und Befunde**
+
+![Vorschlag und Befunde](docs/screenshots/proposal.png)
+
+**Domänenansicht**, mit den Elementen, die der Befund nennt
+
+![Domänenansicht](docs/screenshots/domain-view.png)
+
+**Bestand**, aufgenommen nach dem Übernehmen des Vorschlags
+
+![Bestand](docs/screenshots/inventory.png)
 
 ### Abnahme M0
 
 | Kriterium | Ergebnis |
 |---|---|
-| Installation in der Dev-Instanz | Geprüft. Core 2026.10.4 lokal gestartet, Config Entry über die Config-Flow-API angelegt, Zustand `loaded`. Ein Erststart in frischer Umgebung richtet Demo- und Template-Entitäten ohne Neustart ein. Nach der Umbenennung auf AI Drafts wurden Start, Einrichtung und Panel erneut geprüft, der Erststart in frischer Umgebung nicht. |
-| Beispielszenario lässt sich durchklicken | **Offen.** Die vier Ansichten und die Beispieldaten gibt es noch nicht. Geprüft ist nur, dass das Panel öffnet und die Daten aus `ai_drafts/info` zeigt (Chromium, Deutsch und Englisch, helles und dunkles Theme, schmale Ansicht mit Menüknopf). |
-| CI grün | Geprüft. Im ersten Lauf lehnte die HACS-Action das damals private Repo ab. Seit das Repo öffentlich ist, sind alle fünf Jobs grün: `hassfest`, HACS, `ruff`, `pytest` und der Frontend-Build. Bei HACS sind die Prüfungen `description` und `topics` ausgenommen. |
+| Installation in der Dev-Instanz | Geprüft. Core 2026.10.4 lokal gestartet, Config Entry über die Config-Flow-API angelegt, Zustand `loaded`. Ein Erststart in frischer Umgebung richtete Demo- und Template-Entitäten ohne Neustart ein; das wurde vor der Umbenennung auf AI Drafts geprüft und danach nicht wiederholt. |
+| Beispielszenario lässt sich durchklicken | Geprüft in Chromium gegen eine laufende Instanz, zweimal unabhängig: Anfrage, Entwurf, Vorschlag mit Befund, Markierung in der Domänenansicht, Netz, Übernehmen, neuer Eintrag im Bestand, Rückgängig, Eintrag wieder weg. Keine Fehler in der Browser-Konsole. Bei 400 px Breite läuft die Seite nicht über; die Grafik scrollt in ihrer Ansicht. |
+| CI grün | Geprüft. Der Lauf zum Commit mit dem Schaukasten ist grün: `hassfest`, HACS, `ruff`, `pytest` und der Frontend-Build. Bei HACS sind die Prüfungen `description` und `topics` ausgenommen. |
 | Devcontainer | **Nicht geprüft.** Er lässt sich in der Sitzungsumgebung nicht starten. Geprüft ist nur, dass das Image `mcr.microsoft.com/devcontainers/python:3.14` existiert und dass `scripts/setup` und `scripts/develop` außerhalb des Containers funktionieren. |
 
 ### Festlegungen dieser Sitzung
@@ -350,30 +378,55 @@ M0 nach Fassung 2 ist nicht abgeschlossen. Das Gerüst steht, der Schaukasten fe
   - `apply` prüft zusätzlich selbst auf `error`-Befunde, unabhängig vom Status.
   - `decided` wird bei `apply` und `discard` gesetzt und bleibt bei `revert` unverändert.
 - **Operationen.** `create` braucht `after` und hat kein `before`. `update` braucht `target_id` und `after`. `delete` braucht `target_id` und hat kein `after`. „Kein“ heißt `null`, nicht `{}`.
-- **Frontend-Bundle** ist eingecheckt, damit eine Installation aus dem Repo ohne Build funktioniert. CI baut neu und schlägt fehl, wenn das eingecheckte Bundle abweicht. Mit `elkjs` steht das wieder zur Entscheidung (Abschnitt 10).
+- **`net_refs`.** Eine Liste von IDs der Netzelemente. Gespeicherte Befunde ohne das Feld werden als leere Liste gelesen.
+- **Netzformat Version 0** (vorläufig, beschrieben in `frontend/src/demo/README.md`):
+  - Eine Zustandsstelle je Entität und diskretem Zustand, nur für Zustände, die eine Automation verwendet. ID `p:<entity_id>:<zustand>`.
+  - Je Automation eine Kontrollstelle `p:<automation>:triggered` und eine weitere vor jedem späteren Aktionsschritt.
+  - Jeder Auslöser ist eine Transition. Ein Zustandsauslöser liest seine Zustandsstelle. Ein Auslöser ohne Entitätszustand, etwa eine Uhrzeit, hat keine Eingangsstelle und trägt eine `event`-Annotation.
+  - Bedingungen auf diskrete Zustände sind Lesekanten in die Auslöser-Transitionen.
+  - Jeder Aktionsschritt, der einen Zustand schreibt, ist eine Transition. Sie verbraucht die andere Zustandsstelle der Entität und erzeugt die Zielstelle.
+  - Wartezeit und Ausführungsmodus sind Annotationen.
+  - Jedes Element trägt seine Herkunft: Automation, Pfad in der Konfiguration, Entität, Bereich.
+- **Frontend-Bundle** ist eingecheckt, damit eine Installation aus dem Repo ohne Build funktioniert. CI baut neu und schlägt fehl, wenn das eingecheckte Bundle abweicht. Es misst mit dem Schaukasten 106 kB, gzip-komprimiert 26 kB, und hat außer Lit keine Abhängigkeit.
 - **Keine Platzhalter-Module.** `context.py`, `drafting.py`, `apply.py`, `journal.py`, `net/`, `checks/`, `schemas/` und `eval/` entstehen erst mit Inhalt.
 - **Dev-Instanz** mit expliziter Komponentenliste statt `default_config`. `ai_task` lässt sich nicht per YAML laden; eine AI-Task-Entität gibt es erst, wenn in der Instanz eine KI-Integration eingerichtet ist.
 
 ### Bekannte Punkte
 
-- **`net_refs` fehlt im Code.** `Finding` kennt das Feld aus Fassung 2 noch nicht.
+Zum Schaukasten:
+
+- **Dichte Pfeile.** In der Domänenansicht liegen am Flurlicht mehrere Pfeilspitzen eng beieinander, weil „Nachtruhe im Flur“ dieselbe Entität als Auslöser und als Wirkung hat. Lesbar, aber unruhig.
+- **Lange Kanten.** Eine Bedingung aus einem entfernten Raum würde quer hinter anderen Räumen verlaufen. Im Beispiel kommt das nicht vor. Im Netz laufen Rückkanten als lange Bögen durch das Diagramm.
+- **Kleine Schrift am Telefon.** Die Grafik wird bis auf etwa 70 % verkleinert und scrollt dann waagrecht. Die Schrift ist dann rund 9 bis 10 px groß.
+- **Layout ist eine Heuristik.** Die Spalte „Ohne Raum“ steht in der Mitte, damit Zustände, die mehrere Räume lesen, nah liegen. Für echte Installationen ist das nicht erprobt.
+- **Uhrzeit als Kachel.** Der Zeitauslöser erscheint als eigene Kachel „Uhrzeit 23:00 Uhr“ unter „Ohne Raum“, obwohl er keine Entität ist.
+- **Beispieltexte nur deutsch.** Die Oberfläche ist zweisprachig, die Beispieldaten sind es nicht.
+- **Zustandsautomat doppelt.** Die Übergangstabelle steht für den Schaukasten zusätzlich in `frontend/src/logic/changeset-machine.ts`. Mit M1 übernimmt das Backend, die Kopie entfällt.
+- **YAML nur zur Anzeige.** Die Ausgabe stammt aus einer eigenen kleinen Funktion, nicht aus einer YAML-Bibliothek.
+
+Zur Abbildung auf das Netz, als Eingabe für M2:
+
+- **Hängende Marke.** „Einschalten“ verbraucht die Stelle „aus“. Ist das Licht schon an, kann die Transition nicht schalten, und die Kontrollmarke bleibt liegen.
+- **Bedingung auf der Entität des Auslösers.** Sie ist im Netz nicht vom Auslöser zu unterscheiden, weil beides Lesekanten in dieselbe Transition sind.
+- **Wartezeit.** Sie hängt als Annotation an der folgenden Aktion. Die Nummern der Kontrollstellen überspringen deshalb den Warteschritt.
+- **Nicht ausdrückbar.** Numerische Zustände, Templates und die Wirkung der Ausführungsmodi.
+
+Sonstiges:
+
 - **HACS:** Die Prüfungen `description` und `topics` sind im Workflow ausgenommen, weil beides in den GitHub-Einstellungen des Repos fehlt. Vor dem HACS-Release setzen und die Ausnahme entfernen. Der HACS-Job läuft nur bei öffentlichem Repo, weil die Action private Repos ablehnt.
 - **Icon:** `brand/icon.png` ist ein Platzhalter.
-- **Cache des Bundles:** Es wird mit `?v=<Version>` und langen Cache-Headern ausgeliefert. Wer am Panel entwickelt, ohne die Version zu erhöhen, bekommt im Browser das alte Bundle. Mit dem Schaukasten auf einen Inhalts-Hash umstellen.
 - **`libturbojpeg`:** Die Dev-Instanz protokolliert beim Start einen Fehler mit Traceback, weil die Systembibliothek fehlt. Betroffen sind nur Kamera-Schnappschüsse der Demo. Im Devcontainer ließe sich `libturbojpeg0` nachinstallieren.
 - **Speicher:** Change Sets werden unbegrenzt aufbewahrt. Die Aufbewahrung ist mit dem Protokoll (`journal`) zu klären.
 
 ### Nächste Schritte
 
-Rest von M0 (Schaukasten):
+Vor M1:
 
-1. `Finding` um `net_refs` erweitern. Gespeicherte Change Sets ohne das Feld müssen lesbar bleiben.
-2. Beispieldaten anlegen: Haus mit drei Räumen und vier Automationen, ein Vorschlag mit Konfliktbefund, das zugehörige Netz.
-3. Panel mit den vier Ansichten bauen, gespeist aus den Beispieldaten, als Demo gekennzeichnet, durchklickbar von der Anfrage bis zum Übernehmen. Kein Modellaufruf, kein Schreiben.
-4. Domänenansicht als SVG mit Lit und eigenem einfachem Layout bauen.
-5. Bildschirmfotos der vier Ansichten hier nachtragen.
+1. Den Schaukasten beurteilen: Bedienkonzept, Domänenansicht, Netzansicht. Dafür ist er gebaut.
+2. Den Devcontainer einmal öffnen.
+3. Die noch offenen Punkte in Abschnitt 10 entscheiden.
 
-Danach M1:
+M1:
 
 1. Strukturierte Ausgabe über AI Task mit dem Selektor-Schema erproben und danach zwischen AI Task und eigenem Client entscheiden.
 2. `context.py`: Hausmodell aus den Registern und den bestehenden Automationen, Ausschnittwahl mit Obergrenze.

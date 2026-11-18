@@ -455,12 +455,12 @@ M1 läuft. Der Stand steht in Abschnitt 14.
 
 ## 14. Stand M1
 
-M1 ist in drei Teile geschnitten. Teil 1 ist fertig, Teil 2 und 3 stehen aus.
+M1 ist in drei Teile geschnitten. Teil 1 und 2 sind fertig. Teil 3 steht aus und braucht ein echtes Modell. Bis dahin ist die Abnahme von M1 nur zur Hälfte erfüllt: Der Fall mit erfundener Entität ist gezeigt, die gültige Automation aus einem echten Modell nicht.
 
 | Teil | Inhalt | Stand |
 |---|---|---|
 | 1 | Backend: Kontext, Entwurf mit Reparaturschleife, Prüfungen der Stufe A, Schreiben mit Schnappschuss und Rückgängig, Protokoll, WebSocket-Kommandos | Erledigt |
-| 2 | Frontend: Ansichten Anfrage und Vorschlag auf echten Daten, YAML-Diff | Offen |
+| 2 | Frontend: Ansichten Anfrage und Vorschlag auf echten Daten, YAML-Diff | Erledigt |
 | 3 | Erprobung mit einem echten Modell, Entscheidung zwischen AI Task und eigenem Client, Beginn des Eval-Satzes | Offen, braucht Zugang zu einem Modell |
 
 ### Teil 1: was es gibt
@@ -526,7 +526,52 @@ An der Auswahl des Ausschnitts:
 
 - Der Abgleich läuft über Wortteile. Kurze Wörter wie „Bad“ können unpassende Entitäten mitziehen.
 
+### Teil 2: was es gibt
+
+- **Anfrage und Verlauf** fordert den Entwurf beim Backend an und zeigt die gespeicherten Change Sets, neueste zuerst. Während ein Entwurf läuft, ist der Knopf gesperrt, und ein Hinweis sagt, dass es bis zu einer Minute dauern kann. Ein Klick auf einen Eintrag öffnet ihn.
+- **Vorschlag und Befunde** zeigt ein Change Set so, wie das Backend es liefert, und entscheidet über die WebSocket-Kommandos. Der Browser setzt keinen Status mehr selbst. Angeboten wird nur, was der Status erlaubt.
+- **Beschreibung in Worten.** Auslöser, Bedingungen und Aktionen der Automation, mit den Namen aus Home Assistant. Sie wird aus der Konfiguration abgeleitet, weil es für echte Daten vor M2 kein Netz gibt. Was die Beschreibung nicht erkennt, erscheint als beschriftetes YAML und wird nicht geraten.
+- **YAML.** Die Automation mit jeder Zeile als Zugang markiert, weil M1 nur anlegt. Ein allgemeiner Diff folgt mit dem Ändern in M5.
+- **Nach dem Übernehmen** stehen die ID der Automation und ein Link in den Editor von Home Assistant.
+- **Protokoll.** Übernehmen und Verwerfen melden, ob gerade die Beschreibung oder das YAML offen war und welche Ansichten besucht wurden.
+- **Domänenansicht und Bestand** bleiben bei den Beispieldaten und sagen das. Die Kopie des Zustandsautomaten im Browser ist entfernt.
+
+![Anfrage und Verlauf mit echten Daten](docs/screenshots/m1-request.png)
+
+![Vorschlag mit echten Daten](docs/screenshots/m1-proposal.png)
+
+### Teil 2: geprüft
+
+In Chromium gegen eine laufende Instanz mit dem Stellvertreter-Modell, zweimal unabhängig durchgeklickt:
+
+- Flurlicht-Anfrage: Vorschlag „Geprüft“ mit Beschreibung und YAML. Übernehmen schreibt die Automation in die Datei, die Entität existiert, der Link in den Editor erscheint. Rückgängig entfernt beides.
+- Anfrage mit erfundener Entität, die das Modell nicht korrigiert: „Fehlgeschlagen“, die Fehler stehen da, Übernehmen wird nicht angeboten, Verwerfen schon.
+- Der Verlauf zeigt die Einträge mit ihrem Status.
+- Bei abgeschaltetem Modell erscheint die Fehlermeldung, und der Verlauf bekommt einen fehlgeschlagenen Eintrag.
+- Keine Fehler in der Browser-Konsole, keine Einträge von `ai_drafts` im Log.
+
+Nicht geprüft: die englische Oberfläche, der Weg über AI Task, ein langer Entwurf mit einem echten Modell, zwei Browser-Fenster gleichzeitig.
+
+### Teil 2: bekannte Schwächen
+
+- **Befunde sprechen das Modell an.** Die Meldungen der Prüfungen gehen wörtlich an das Modell und in die Oberfläche. Sätze wie „Use only entity ids from the context“ sind für Menschen unpassend, und die Meldungen sind nur englisch.
+- **Beschreibung ist eine Heuristik.** Schon ein unbekannter Schlüssel lässt einen Schritt als YAML erscheinen.
+- **YAML zur Anzeige.** Es stammt aus der eigenen kleinen Funktion und kann in der Schreibweise von der Datei abweichen, etwa bei Anführungszeichen.
+- **Modellfehler ohne Verweis.** Die Fehlermeldung nennt das fehlgeschlagene Change Set nur im Text. Es erscheint im Verlauf, ist aus der Meldung aber nicht anklickbar.
+- **Neuladen beim allerersten Besuch.** In einem frischen Browser lädt Home Assistant die Seite wenige Sekunden nach dem ersten Öffnen einmal neu. Eine bis dahin getippte Anfrage ist dann weg. Ein laufender Entwurf geht nicht verloren, er steht danach im Verlauf.
+
+### Zur Arbeitsweise
+
+Drei Tests liefen lokal durch und in der CI nicht. Home Assistant installiert beim Start der Dev-Instanz Pakete in die lokale Umgebung nach, die in `requirements_dev.txt` fehlten. Die Datei ist ergänzt. Änderungen am Backend werden seitdem zusätzlich in einer frisch aus `requirements_dev.txt` gebauten Umgebung getestet.
+
 ### Wie es weitergeht
 
-1. Teil 2: Ansichten Anfrage und Vorschlag auf die WebSocket-Kommandos umstellen, YAML-Diff, Durchklicken gegen das Stellvertreter-Modell.
-2. Teil 3: Zugang zu einem echten Modell klären, die Flurlicht-Anfrage damit prüfen, AI Task und eigenen Client vergleichen, Eval-Satz beginnen.
+Teil 3 braucht Zugang zu einem echten Modell:
+
+1. Die Flurlicht-Anfrage mit einem echten Modell prüfen. Das ist der offene Teil der Abnahme.
+2. AI Task und den eigenen Client vergleichen und entscheiden, welcher Weg empfohlen wird.
+3. Den Eval-Satz beginnen.
+
+Unabhängig davon:
+
+- Die Meldungen der Befunde für Menschen formulieren und übersetzen.

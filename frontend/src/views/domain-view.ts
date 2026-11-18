@@ -10,7 +10,7 @@ import { demoBanner, fire, sharedStyles } from "./shared";
 export interface DomainAutomation {
   info: AutomationInfo;
   alias: string;
-  /** True while the automation is an open proposal, false once it exists. */
+  /** True for the example proposal, which is drawn highlighted. */
   isProposal: boolean;
 }
 
@@ -82,6 +82,11 @@ export class DomainView extends LitElement {
             </button>`,
           )}
         </div>
+        ${this._hasMarks
+          ? nothing
+          : html`<button type="button" class="secondary" @click=${() => fire(this, "mark-example")}>
+              ${t.markExample}
+            </button>`}
         ${this._hasMarks
           ? html`<span class="chip marked">
               ${t.marksActive}

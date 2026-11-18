@@ -10,8 +10,6 @@ export interface InventoryItem {
   alias: string;
   mode: string | null;
   description: Description;
-  /** True for the automation the showcase applied just now. */
-  isNew: boolean;
 }
 
 export class InventoryView extends LitElement {
@@ -62,7 +60,6 @@ export class InventoryView extends LitElement {
       <li class="card">
         <div class="head">
           <h3>${item.alias}</h3>
-          ${item.isNew ? html`<span class="badge proposal">${t.newBadge}</span>` : nothing}
         </div>
         <p class="summary">
           <span class="part">${d.triggers.map((x) => x.text).join(", ")}</span>

@@ -2,6 +2,7 @@
 export interface HomeAssistant {
   language: string;
   locale: { language: string };
+  states: Record<string, { state: string; attributes: Record<string, unknown> }>;
   callWS<T>(msg: { type: string; [key: string]: unknown }): Promise<T>;
 }
 

@@ -1,7 +1,8 @@
 import { LitElement, css, html } from "lit";
-import { AUTOMATIONS, HISTORY, HOUSE, NET_EXISTING, NET_PROPOSAL, PROPOSAL } from "./demo";
+import { type ApiError, createDraft, decide, listChangeSets, toApiError } from "./api";
+import { AUTOMATIONS, HOUSE, NET_EXISTING, NET_PROPOSAL, PROPOSAL } from "./demo";
 import { type Strings, getStrings } from "./localize";
-import { type Action, perform } from "./logic/changeset-machine";
+import type { Decision } from "./logic/changeset-actions";
 import { describeAutomation } from "./logic/describe";
 import {
   type Marks,
@@ -15,7 +16,8 @@ import type { ChangeSet } from "./model";
 import type { HomeAssistant, PanelInfo, Route } from "./types";
 import { type DomainAutomation, type DomainMode } from "./views/domain-view";
 import { type InventoryItem } from "./views/inventory";
-import { type InfoState } from "./views/request";
+import { type ProposalPart } from "./views/proposal";
+import { type HistoryState, type InfoState } from "./views/request";
 import "./views/domain-view";
 import "./views/inventory";
 import "./views/proposal";
@@ -24,14 +26,29 @@ import "./views/request";
 type Tab = "request" | "proposal" | "domain" | "inventory";
 const TABS: Tab[] = ["request", "proposal", "domain", "inventory"];
 
+// Domain view and inventory still show the example house (milestone M3).
 const NET_FULL = mergeNets(NET_EXISTING, NET_PROPOSAL);
-const PROPOSAL_AUTOMATION_ID = String(PROPOSAL.operations[0]?.after?.id ?? "");
+const EXAMPLE_PROPOSAL_ID = String(PROPOSAL.operations[0]?.after?.id ?? "");
 const ALIASES = new Map<string, string>([
   ...AUTOMATIONS.map((a): [string, string] => [a.id, a.alias]),
-  [PROPOSAL_AUTOMATION_ID, String(PROPOSAL.operations[0]?.after?.alias ?? "")],
+  [EXAMPLE_PROPOSAL_ID, String(PROPOSAL.operations[0]?.after?.alias ?? "")],
 ]);
 const INFOS = deriveAutomations(NET_FULL);
+const EXISTING_INFOS = INFOS.filter((i) => i.id !== EXAMPLE_PROPOSAL_ID);
 const PLACE_LABELS = new Map(NET_FULL.places.map((p) => [p.id, p.label]));
+const EXAMPLE_REFS = PROPOSAL.findings.flatMap((f) => f.net_refs);
+const DOMAIN_AUTOMATIONS: DomainAutomation[] = INFOS.map((info) => ({
+  info,
+  alias: ALIASES.get(info.id) ?? info.id,
+  isProposal: info.id === EXAMPLE_PROPOSAL_ID,
+}));
+const INVENTORY_ITEMS: InventoryItem[] = EXISTING_INFOS.map((info) => ({
+  id: info.id,
+  alias: ALIASES.get(info.id) ?? info.id,
+  mode: info.mode,
+  description: describeAutomation(info, HOUSE),
+}));
+const INVENTORY_DEPENDENCIES = deriveDependencies(EXISTING_INFOS);
 
 class AIDraftsPanel extends LitElement {
   static override properties = {
@@ -41,7 +58,13 @@ class AIDraftsPanel extends LitElement {
     panel: { attribute: false },
     _info: { state: true },
     _tab: { state: true },
-    _proposal: { state: true },
+    _history: { state: true },
+    _current: { state: true },
+    _part: { state: true },
+    _drafting: { state: true },
+    _draftError: { state: true },
+    _pending: { state: true },
+    _decisionError: { state: true },
     _marks: { state: true },
     _focus: { state: true },
     _mode: { state: true },
@@ -53,19 +76,35 @@ class AIDraftsPanel extends LitElement {
   declare panel: PanelInfo;
   declare _info: InfoState;
   declare _tab: Tab;
-  /** The open proposal; null until a draft was created. */
-  declare _proposal: ChangeSet | null;
+  declare _history: HistoryState;
+  /** The change set open in the proposal view, as the backend last returned it. */
+  declare _current: ChangeSet | null;
+  declare _part: ProposalPart;
+  declare _drafting: boolean;
+  declare _draftError: ApiError | null;
+  /** The decision being sent to the backend. */
+  declare _pending: Decision | null;
+  declare _decisionError: ApiError | null;
   declare _marks: Marks;
   declare _focus: string | null;
   declare _mode: DomainMode;
 
   private _requested = false;
+  private _historySeq = 0;
+  /** Views and parts visited while the current change set is open. */
+  private _viewsOpened: string[] = [];
 
   constructor() {
     super();
     this._info = { status: "loading" };
     this._tab = "request";
-    this._proposal = null;
+    this._history = { status: "loading" };
+    this._current = null;
+    this._part = "description";
+    this._drafting = false;
+    this._draftError = null;
+    this._pending = null;
+    this._decisionError = null;
     this._marks = NO_MARKS;
     this._focus = null;
     this._mode = "house";
@@ -76,6 +115,7 @@ class AIDraftsPanel extends LitElement {
     if (this.hass && !this._requested) {
       this._requested = true;
       void this._loadInfo();
+      void this._loadHistory();
     }
   }
 
@@ -87,62 +127,99 @@ class AIDraftsPanel extends LitElement {
       >({ type: "ai_drafts/info" });
       this._info = { status: "ready", info };
     } catch (err) {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message: unknown }).message)
-          : String(err);
-      this._info = { status: "error", message };
+      this._info = { status: "error", message: toApiError(err).message };
     }
   }
 
-  // --- Showcase state ------------------------------------------------------
+  // --- Change sets ---------------------------------------------------------
 
-  /** An automation exists in the showcase while the proposal is open or applied. */
-  private get _proposalLive(): "open" | "applied" | null {
-    const status = this._proposal?.status;
-    if (status === "checked" || status === "draft") return "open";
-    if (status === "applied") return "applied";
-    return null;
-  }
-
-  private _alias(id: string): string {
-    return ALIASES.get(id) ?? id;
-  }
-
-  private _domainAutomations(): DomainAutomation[] {
-    const live = this._proposalLive;
-    return INFOS.filter((i) => i.id !== PROPOSAL_AUTOMATION_ID || live !== null).map((info) => ({
-      info,
-      alias: this._alias(info.id),
-      isProposal: info.id === PROPOSAL_AUTOMATION_ID && live === "open",
-    }));
-  }
-
-  private _inventoryItems(): InventoryItem[] {
-    return INFOS.filter((i) => i.id !== PROPOSAL_AUTOMATION_ID || this._proposalLive === "applied").map(
-      (info) => ({
-        id: info.id,
-        alias: this._alias(info.id),
-        mode: info.mode,
-        description: describeAutomation(info, HOUSE),
-        isNew: info.id === PROPOSAL_AUTOMATION_ID,
-      }),
-    );
-  }
-
-  private _decide(action: Action): void {
-    if (!this._proposal) return;
-    this._proposal = perform(this._proposal, action);
-    // A marked finding or focus on an automation that just vanished is stale.
-    if (this._proposalLive === null) {
-      this._marks = NO_MARKS;
-      if (this._focus === PROPOSAL_AUTOMATION_ID) this._focus = null;
+  /** Reload the history. A late answer of an older call is dropped. */
+  private async _loadHistory(): Promise<void> {
+    const seq = ++this._historySeq;
+    try {
+      const items = await listChangeSets(this.hass);
+      if (seq !== this._historySeq) return;
+      this._history = { status: "ready", items };
+      // Keep the open change set in step with the backend, unless a decision
+      // is in flight: its answer is newer than this list.
+      if (this._current && this._pending === null) {
+        const fresh = items.find((cs) => cs.id === this._current?.id);
+        if (fresh) this._current = fresh;
+      }
+    } catch (err) {
+      if (seq !== this._historySeq) return;
+      this._history = { status: "error", message: toApiError(err).message };
     }
   }
+
+  private _open(changeSet: ChangeSet): void {
+    this._current = changeSet;
+    this._part = "description";
+    this._viewsOpened = [];
+    this._decisionError = null;
+    this._go("proposal");
+  }
+
+  private _onCreateDraft = async (e: CustomEvent<{ request: string }>): Promise<void> => {
+    if (this._drafting) return;
+    this._drafting = true;
+    this._draftError = null;
+    try {
+      const changeSet = await createDraft(this.hass, e.detail.request);
+      this._open(changeSet);
+    } catch (err) {
+      this._draftError = toApiError(err);
+    } finally {
+      this._drafting = false;
+    }
+    // After a model error the failed change set is stored, so reload in any case.
+    void this._loadHistory();
+  };
+
+  private _onDecide = async (e: CustomEvent<{ decision: Decision }>): Promise<void> => {
+    const current = this._current;
+    if (!current || this._pending) return;
+    this._pending = e.detail.decision;
+    this._decisionError = null;
+    try {
+      // Show exactly what the backend returns, never a status of our own.
+      this._current = await decide(this.hass, e.detail.decision, current.id, {
+        decidedIn: this._part,
+        viewsOpened: this._viewsOpened,
+      });
+    } catch (err) {
+      this._decisionError = toApiError(err);
+    } finally {
+      this._pending = null;
+    }
+    // Also after an error: a wrong_state means the list knows better.
+    void this._loadHistory();
+  };
+
+  // --- Navigation ----------------------------------------------------------
 
   private _go(tab: Tab): void {
     this._tab = tab;
+    this._visit();
+    if (tab === "request") void this._loadHistory();
   }
+
+  private _setPart(part: ProposalPart): void {
+    this._part = part;
+    this._visit();
+  }
+
+  /** Record the view that is now active, while a change set is open. */
+  private _visit(): void {
+    if (!this._current) return;
+    const name = this._tab === "proposal" ? `proposal.${this._part}` : this._tab;
+    if (!this._viewsOpened.includes(name)) this._viewsOpened = [...this._viewsOpened, name];
+  }
+
+  private _nameOf = (entityId: string): string => {
+    const name = this.hass?.states?.[entityId]?.attributes?.friendly_name;
+    return typeof name === "string" && name ? name : entityId;
+  };
 
   // --- Rendering -----------------------------------------------------------
 
@@ -178,17 +255,18 @@ class AIDraftsPanel extends LitElement {
       <div
         class="content"
         @create-draft=${this._onCreateDraft}
-        @open-proposal=${() => this._go("proposal")}
+        @open-changeset=${this._onOpenChangeSet}
+        @decide=${this._onDecide}
+        @set-part=${(e: CustomEvent<{ part: ProposalPart }>) => this._setPart(e.detail.part)}
         @goto-request=${() => this._go("request")}
         @retry-info=${() => void this._loadInfo()}
+        @retry-history=${() => void this._loadHistory()}
         @show-finding=${this._onShowFinding}
+        @mark-example=${() => (this._marks = resolveMarks(NET_FULL, EXAMPLE_REFS))}
         @focus-automation=${this._onFocusAutomation}
         @clear-marks=${() => (this._marks = NO_MARKS)}
         @clear-focus=${() => (this._focus = null)}
         @set-mode=${(e: CustomEvent<{ mode: DomainMode }>) => (this._mode = e.detail.mode)}
-        @apply=${() => this._decide("apply")}
-        @discard=${() => this._decide("discard")}
-        @revert=${() => this._decide("revert")}
       >
         ${this._renderViews(t, language)}
       </div>
@@ -196,15 +274,16 @@ class AIDraftsPanel extends LitElement {
   }
 
   private _renderViews(t: Strings, language: string | undefined) {
-    const proposalInfo = INFOS.find((i) => i.id === PROPOSAL_AUTOMATION_ID) ?? null;
     return html`
       <div class="view" id="view-request" role="tabpanel" ?hidden=${this._tab !== "request"}>
         <ai-drafts-request
           .t=${t}
           .language=${language}
           .info=${this._info}
-          .history=${HISTORY}
-          .proposal=${this._proposal}
+          .history=${this._history}
+          .currentId=${this._current?.id ?? null}
+          .drafting=${this._drafting}
+          .error=${this._draftError}
           .exampleRequest=${PROPOSAL.request}
         ></ai-drafts-request>
       </div>
@@ -212,9 +291,11 @@ class AIDraftsPanel extends LitElement {
         <ai-drafts-proposal
           .t=${t}
           .language=${language}
-          .proposal=${this._proposal}
-          .description=${proposalInfo ? describeAutomation(proposalInfo, HOUSE) : null}
-          .mode=${proposalInfo?.mode ?? null}
+          .proposal=${this._current}
+          .section=${this._part}
+          .nameOf=${this._nameOf}
+          .pending=${this._pending}
+          .error=${this._decisionError}
         ></ai-drafts-proposal>
       </div>
       <div class="view wide" id="view-domain" role="tabpanel" ?hidden=${this._tab !== "domain"}>
@@ -223,7 +304,7 @@ class AIDraftsPanel extends LitElement {
           .language=${language}
           .house=${HOUSE}
           .net=${NET_FULL}
-          .automations=${this._domainAutomations()}
+          .automations=${DOMAIN_AUTOMATIONS}
           .marks=${this._marks}
           .focusId=${this._focus}
           .mode=${this._mode}
@@ -232,10 +313,8 @@ class AIDraftsPanel extends LitElement {
       <div class="view" id="view-inventory" role="tabpanel" ?hidden=${this._tab !== "inventory"}>
         <ai-drafts-inventory
           .t=${t}
-          .items=${this._inventoryItems()}
-          .dependencies=${deriveDependencies(
-            INFOS.filter((i) => i.id !== PROPOSAL_AUTOMATION_ID || this._proposalLive === "applied"),
-          )}
+          .items=${INVENTORY_ITEMS}
+          .dependencies=${INVENTORY_DEPENDENCIES}
           .stateLabelOf=${(id: string) => PLACE_LABELS.get(id) ?? id}
         ></ai-drafts-inventory>
       </div>
@@ -244,12 +323,10 @@ class AIDraftsPanel extends LitElement {
 
   // --- Events --------------------------------------------------------------
 
-  private _onCreateDraft = (): void => {
-    // The showcase has one prepared proposal; creating a draft always opens it.
-    this._proposal = { ...PROPOSAL };
-    this._marks = NO_MARKS;
-    this._focus = null;
-    this._go("proposal");
+  private _onOpenChangeSet = (e: CustomEvent<{ id: string }>): void => {
+    if (this._history.status !== "ready") return;
+    const changeSet = this._history.items.find((cs) => cs.id === e.detail.id);
+    if (changeSet) this._open(changeSet);
   };
 
   private _onShowFinding = (e: CustomEvent<{ netRefs: string[] }>): void => {

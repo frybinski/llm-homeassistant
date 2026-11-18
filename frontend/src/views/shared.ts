@@ -1,5 +1,6 @@
 import { type TemplateResult, css, html } from "lit";
 import type { Strings } from "../localize";
+import type { ApiError } from "../api";
 
 /** Dispatch a bubbling event that crosses shadow roots. */
 export function fire<T>(el: HTMLElement, name: string, detail?: T): void {
@@ -12,6 +13,31 @@ export function demoBanner(t: Strings): TemplateResult {
     <div class="demo-banner" role="note">
       <span class="demo-tag">${t.demoTitle}</span>
       <span>${t.demoText}</span>
+    </div>
+  `;
+}
+
+function errorLead(t: Strings, code: string): string {
+  const leads: Record<string, string> = {
+    busy: t.errBusy,
+    model_error: t.errModel,
+    not_loaded: t.errNotLoaded,
+    apply_blocked: t.errApplyBlocked,
+    apply_failed: t.errApplyFailed,
+    revert_refused: t.errRevertRefused,
+    wrong_state: t.errWrongState,
+    not_found: t.errNotFound,
+  };
+  return leads[code] ?? t.errUnknown;
+}
+
+/** A backend error: what it means for the user, then the backend's own message. */
+export function errorBox(t: Strings, err: ApiError): TemplateResult {
+  return html`
+    <div class="error" role="alert">
+      <p>${errorLead(t, err.code)}</p>
+      <p class="detail">${err.message}</p>
+      <p class="detail code">${t.errorCode}: ${err.code}</p>
     </div>
   `;
 }
@@ -71,6 +97,23 @@ export const sharedStyles = css`
     background-color: var(--card-background-color);
     border: 1px solid var(--divider-color);
     border-radius: var(--ha-card-border-radius, 12px);
+  }
+  .error {
+    margin: 12px 0 0;
+    padding: 12px 16px;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+    border-radius: 8px;
+  }
+  .error p:last-child {
+    margin-bottom: 0;
+  }
+  .error .detail {
+    margin-bottom: 4px;
+    color: var(--secondary-text-color);
+    font-family: var(--code-font-family, monospace);
+    font-size: 13px;
+    overflow-wrap: anywhere;
   }
   .badge {
     display: inline-block;

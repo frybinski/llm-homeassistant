@@ -1,0 +1,230 @@
+[
+  {
+    "id": "cs_demo_flurlicht",
+    "request": "Schalte das Flurlicht bei Bewegung nach Sonnenuntergang für 3 Minuten ein",
+    "status": "checked",
+    "operations": [
+      {
+        "kind": "automation",
+        "op": "create",
+        "target_id": null,
+        "before": null,
+        "after": {
+          "id": "flurlicht_bewegung",
+          "alias": "Flurlicht bei Bewegung",
+          "mode": "restart",
+          "triggers": [
+            {
+              "trigger": "state",
+              "entity_id": "binary_sensor.flur_bewegungsmelder",
+              "to": "on"
+            }
+          ],
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "sun.sun",
+              "state": "below_horizon"
+            }
+          ],
+          "actions": [
+            {
+              "action": "light.turn_on",
+              "target": {
+                "entity_id": "light.flurlicht"
+              }
+            },
+            {
+              "delay": "00:03:00"
+            },
+            {
+              "action": "light.turn_off",
+              "target": {
+                "entity_id": "light.flurlicht"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "findings": [
+      {
+        "severity": "warning",
+        "check": "conflicts.opposing_actions",
+        "message": "Nach 23:00 Uhr schaltet „Nachtruhe im Flur“ das Flurlicht sofort wieder aus, sobald dieser Vorschlag es einschaltet. Das Licht brennt dann nicht 3 Minuten.",
+        "path": "actions[0]",
+        "net_refs": [
+          "t:flurlicht_bewegung:action:0",
+          "p:light.flurlicht:on",
+          "t:nachtruhe_flur:trigger:0",
+          "t:nachtruhe_flur:action:0",
+          "p:input_boolean.nachtmodus:on"
+        ]
+      }
+    ],
+    "model": "ai_task.beispielmodell",
+    "rounds": 0,
+    "created": "2026-11-18T21:30:00+00:00",
+    "decided": null
+  },
+  {
+    "id": "cs_demo_kueche",
+    "request": "Schalte das Küchenlicht bei Bewegung ein und nach 5 Minuten wieder aus",
+    "status": "applied",
+    "operations": [
+      {
+        "kind": "automation",
+        "op": "create",
+        "target_id": null,
+        "before": null,
+        "after": {
+          "id": "kuechenlicht_bewegung",
+          "alias": "Küchenlicht bei Bewegung",
+          "mode": "restart",
+          "triggers": [
+            {
+              "trigger": "state",
+              "entity_id": "binary_sensor.kueche_bewegungsmelder",
+              "to": "on"
+            }
+          ],
+          "conditions": [],
+          "actions": [
+            {
+              "action": "light.turn_on",
+              "target": {
+                "entity_id": "light.kueche_arbeitslicht"
+              }
+            },
+            {
+              "delay": "00:05:00"
+            },
+            {
+              "action": "light.turn_off",
+              "target": {
+                "entity_id": "light.kueche_arbeitslicht"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "findings": [],
+    "model": "ai_task.beispielmodell",
+    "rounds": 0,
+    "created": "2026-11-12T18:02:11+00:00",
+    "decided": "2026-11-12T18:03:40+00:00"
+  },
+  {
+    "id": "cs_demo_wohnzimmer",
+    "request": "Dimme im Wohnzimmer alle Lichter, wenn der Fernseher läuft",
+    "status": "discarded",
+    "operations": [
+      {
+        "kind": "automation",
+        "op": "create",
+        "target_id": null,
+        "before": null,
+        "after": {
+          "id": "wohnzimmer_fernsehlicht",
+          "alias": "Wohnzimmer dimmen beim Fernsehen",
+          "mode": "single",
+          "triggers": [
+            {
+              "trigger": "state",
+              "entity_id": "media_player.wohnzimmer_tv",
+              "to": "playing"
+            }
+          ],
+          "conditions": [],
+          "actions": [
+            {
+              "action": "light.turn_on",
+              "target": {
+                "entity_id": "light.wohnzimmer_deckenlicht"
+              },
+              "data": {
+                "brightness_pct": 20
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "findings": [
+      {
+        "severity": "info",
+        "check": "validity.plausibility",
+        "message": "Die Stehlampe im Wohnzimmer wird nicht gedimmt, obwohl „alle Lichter“ verlangt war.",
+        "path": "actions",
+        "net_refs": []
+      }
+    ],
+    "model": "ai_task.beispielmodell",
+    "rounds": 1,
+    "created": "2026-11-14T19:45:02+00:00",
+    "decided": "2026-11-14T19:46:30+00:00"
+  },
+  {
+    "id": "cs_demo_bad",
+    "request": "Schalte das Licht im Bad aus, wenn niemand mehr da ist",
+    "status": "failed",
+    "operations": [
+      {
+        "kind": "automation",
+        "op": "create",
+        "target_id": null,
+        "before": null,
+        "after": {
+          "id": "bad_licht_aus",
+          "alias": "Badlicht aus bei Leere",
+          "mode": "single",
+          "triggers": [
+            {
+              "trigger": "state",
+              "entity_id": "binary_sensor.bad_praesenz",
+              "to": "off",
+              "for": "00:05:00"
+            }
+          ],
+          "conditions": [],
+          "actions": [
+            {
+              "action": "light.turn_off",
+              "target": {
+                "entity_id": "light.bad_deckenlicht"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "findings": [
+      {
+        "severity": "error",
+        "check": "validity.entity_exists",
+        "message": "Die Entität light.bad_deckenlicht existiert nicht.",
+        "path": "actions[0].target.entity_id",
+        "net_refs": []
+      },
+      {
+        "severity": "error",
+        "check": "validity.entity_exists",
+        "message": "Die Entität binary_sensor.bad_praesenz existiert nicht.",
+        "path": "triggers[0].entity_id",
+        "net_refs": []
+      },
+      {
+        "severity": "error",
+        "check": "pipeline",
+        "message": "Der Fehler konnte in 3 Reparaturrunden nicht behoben werden.",
+        "path": null,
+        "net_refs": []
+      }
+    ],
+    "model": "ai_task.beispielmodell",
+    "rounds": 3,
+    "created": "2026-11-16T07:12:44+00:00",
+    "decided": null
+  }
+]

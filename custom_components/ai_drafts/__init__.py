@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 
@@ -14,7 +15,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration
 
 from .changeset import ChangeSetStore
 from .const import (
@@ -34,6 +34,11 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 type AIDraftsConfigEntry = ConfigEntry[ChangeSetStore]
+
+
+def _content_hash(path: Path) -> str:
+    """Return a short hash of a file's content."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -63,14 +68,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: AIDraftsConfigEntry) -> 
     await store.async_load()
     entry.runtime_data = store
 
-    integration = await async_get_integration(hass, DOMAIN)
+    # The static path sends long cache headers, so the URL must change whenever
+    # the bundle does: version the URL by the content of the file.
+    bundle = Path(__file__).parent / "frontend" / PANEL_BUNDLE_FILE
+    cache_buster = await hass.async_add_executor_job(_content_hash, bundle)
     await panel_custom.async_register_panel(
         hass,
         frontend_url_path=PANEL_URL_PATH,
         webcomponent_name=PANEL_COMPONENT_NAME,
         sidebar_title=PANEL_TITLE,
         sidebar_icon=PANEL_ICON,
-        module_url=f"{PANEL_STATIC_URL}/{PANEL_BUNDLE_FILE}?v={integration.version}",
+        module_url=f"{PANEL_STATIC_URL}/{PANEL_BUNDLE_FILE}?v={cache_buster}",
         require_admin=True,
     )
     return True

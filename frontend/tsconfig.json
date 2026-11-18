@@ -10,6 +10,7 @@
     "noImplicitOverride": true,
     "useDefineForClassFields": false,
     "isolatedModules": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "types": ["vite/client"]
   },

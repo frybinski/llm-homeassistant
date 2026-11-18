@@ -1,0 +1,26 @@
+{
+  "format": "ai_drafts.net",
+  "version": 0,
+  "places": [
+    {"id": "p:flurlicht_bewegung:triggered", "kind": "control", "label": "Flurlicht bei Bewegung ausgelöst", "origin": {"automation_id": "flurlicht_bewegung"}},
+    {"id": "p:binary_sensor.flur_bewegungsmelder:on", "kind": "state", "entity_id": "binary_sensor.flur_bewegungsmelder", "state": "on", "label": "Bewegung im Flur", "origin": {"entity_id": "binary_sensor.flur_bewegungsmelder", "area_id": "flur"}},
+    {"id": "p:flurlicht_bewegung:step:2", "kind": "control", "label": "Flurlicht bei Bewegung: Schritt 3", "origin": {"automation_id": "flurlicht_bewegung"}}
+  ],
+  "transitions": [
+    {"id": "t:flurlicht_bewegung:trigger:0", "kind": "trigger", "label": "Bewegung im Flur", "origin": {"automation_id": "flurlicht_bewegung", "path": "triggers[0]", "entity_id": "binary_sensor.flur_bewegungsmelder", "area_id": "flur"}, "annotations": [{"type": "mode", "value": "restart"}]},
+    {"id": "t:flurlicht_bewegung:action:0", "kind": "action", "label": "Flurlicht einschalten", "origin": {"automation_id": "flurlicht_bewegung", "path": "actions[0]", "entity_id": "light.flurlicht", "area_id": "flur"}, "annotations": []},
+    {"id": "t:flurlicht_bewegung:action:2", "kind": "action", "label": "Flurlicht ausschalten", "origin": {"automation_id": "flurlicht_bewegung", "path": "actions[2]", "entity_id": "light.flurlicht", "area_id": "flur"}, "annotations": [{"type": "delay", "value": "00:03:00"}]}
+  ],
+  "arcs": [
+    {"source": "p:binary_sensor.flur_bewegungsmelder:on", "target": "t:flurlicht_bewegung:trigger:0", "kind": "read"},
+    {"source": "t:flurlicht_bewegung:trigger:0", "target": "p:flurlicht_bewegung:triggered", "kind": "produce"},
+    {"source": "p:sun.sun:below_horizon", "target": "t:flurlicht_bewegung:trigger:0", "kind": "read"},
+    {"source": "p:flurlicht_bewegung:triggered", "target": "t:flurlicht_bewegung:action:0", "kind": "consume"},
+    {"source": "p:light.flurlicht:off", "target": "t:flurlicht_bewegung:action:0", "kind": "consume"},
+    {"source": "t:flurlicht_bewegung:action:0", "target": "p:light.flurlicht:on", "kind": "produce"},
+    {"source": "t:flurlicht_bewegung:action:0", "target": "p:flurlicht_bewegung:step:2", "kind": "produce"},
+    {"source": "p:flurlicht_bewegung:step:2", "target": "t:flurlicht_bewegung:action:2", "kind": "consume"},
+    {"source": "p:light.flurlicht:on", "target": "t:flurlicht_bewegung:action:2", "kind": "consume"},
+    {"source": "t:flurlicht_bewegung:action:2", "target": "p:light.flurlicht:off", "kind": "produce"}
+  ]
+}

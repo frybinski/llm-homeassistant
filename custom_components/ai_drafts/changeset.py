@@ -148,6 +148,8 @@ class Finding:
     check: str
     message: str
     path: str | None = None
+    # Ids of net elements this finding is about, for marking in the domain view.
+    net_refs: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Return the JSON representation."""
@@ -156,17 +158,23 @@ class Finding:
             "check": self.check,
             "message": self.message,
             "path": self.path,
+            "net_refs": list(self.net_refs),
         }
 
     @classmethod
     def from_dict(cls, data: Any) -> Self:
         """Parse and validate the JSON representation."""
         data = _require_mapping(data, "finding")
+        # Findings stored before net_refs existed have no such key.
+        net_refs = data.get("net_refs", [])
+        if not isinstance(net_refs, list):
+            raise ChangeSetError("finding.net_refs must be a list")
         return cls(
             severity=_enum(Severity, data.get("severity"), "finding.severity"),
             check=_require_str(data.get("check"), "finding.check"),
             message=_require_str(data.get("message"), "finding.message"),
             path=_optional_str(data.get("path"), "finding.path"),
+            net_refs=tuple(_require_str(r, "finding.net_refs entry") for r in net_refs),
         )
 
 

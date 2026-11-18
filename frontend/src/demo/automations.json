@@ -1,0 +1,41 @@
+[
+  {
+    "id": "nachtmodus_an",
+    "alias": "Nachtmodus um 23 Uhr",
+    "mode": "single",
+    "triggers": [{"trigger": "time", "at": "23:00:00"}],
+    "conditions": [],
+    "actions": [{"action": "input_boolean.turn_on", "target": {"entity_id": "input_boolean.nachtmodus"}}]
+  },
+  {
+    "id": "nachtruhe_flur",
+    "alias": "Nachtruhe im Flur",
+    "mode": "single",
+    "triggers": [{"trigger": "state", "entity_id": "light.flurlicht", "to": "on"}],
+    "conditions": [{"condition": "state", "entity_id": "input_boolean.nachtmodus", "state": "on"}],
+    "actions": [{"action": "light.turn_off", "target": {"entity_id": "light.flurlicht"}}]
+  },
+  {
+    "id": "kuechenlicht_bewegung",
+    "alias": "Küchenlicht bei Bewegung",
+    "mode": "restart",
+    "triggers": [{"trigger": "state", "entity_id": "binary_sensor.kueche_bewegungsmelder", "to": "on"}],
+    "conditions": [],
+    "actions": [
+      {"action": "light.turn_on", "target": {"entity_id": "light.kueche_arbeitslicht"}},
+      {"delay": "00:05:00"},
+      {"action": "light.turn_off", "target": {"entity_id": "light.kueche_arbeitslicht"}}
+    ]
+  },
+  {
+    "id": "kinoabend",
+    "alias": "Kinoabend",
+    "mode": "single",
+    "triggers": [{"trigger": "state", "entity_id": "media_player.wohnzimmer_tv", "to": "playing"}],
+    "conditions": [{"condition": "state", "entity_id": "sun.sun", "state": "below_horizon"}],
+    "actions": [
+      {"action": "light.turn_off", "target": {"entity_id": "light.wohnzimmer_deckenlicht"}},
+      {"action": "light.turn_on", "target": {"entity_id": "light.wohnzimmer_stehlampe"}}
+    ]
+  }
+]

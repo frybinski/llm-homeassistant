@@ -27,6 +27,9 @@ S = ChangeSetStatus
 ERROR = Finding(Severity.ERROR, "schema", "broken", "action[0]")
 WARNING = Finding(Severity.WARNING, "plausibility", "odd")
 INFO = Finding(Severity.INFO, "note", "fyi")
+REFERENCING = Finding(
+    Severity.WARNING, "conflicts", "clash", None, ("p:light.a:on", "t:x:trigger:0")
+)
 
 
 def make_op(**overrides: Any) -> Operation:
@@ -280,7 +283,7 @@ def full_changeset() -> ChangeSet:
         ],
         "ai_task.test",
     )
-    cs.complete_check([WARNING])
+    cs.complete_check([WARNING, REFERENCING])
     cs.apply()
     return cs
 
@@ -289,7 +292,13 @@ def test_to_dict_has_exactly_the_contract_keys() -> None:
     data = full_changeset().to_dict()
     assert set(data) == EXPECTED_KEYS
     assert set(data["operations"][0]) == {"kind", "op", "target_id", "before", "after"}
-    assert set(data["findings"][0]) == {"severity", "check", "message", "path"}
+    assert set(data["findings"][0]) == {
+        "severity",
+        "check",
+        "message",
+        "path",
+        "net_refs",
+    }
     assert data["status"] == "applied"
     assert data["operations"][0]["kind"] == "automation"
     assert datetime.fromisoformat(data["created"]).utcoffset() is not None
@@ -357,3 +366,28 @@ def test_from_dict_rejects_missing_keys() -> None:
         del data[key]
         with pytest.raises(ChangeSetError):
             ChangeSet.from_dict(data)
+
+
+def test_finding_net_refs_default_to_empty_and_serialize_as_list() -> None:
+    assert WARNING.net_refs == ()
+    assert WARNING.to_dict()["net_refs"] == []
+    assert REFERENCING.to_dict()["net_refs"] == ["p:light.a:on", "t:x:trigger:0"]
+
+
+def test_finding_without_net_refs_key_still_loads() -> None:
+    """Change sets stored before net_refs existed must stay readable."""
+    data = full_changeset().to_dict()
+    for finding in data["findings"]:
+        del finding["net_refs"]
+    loaded = ChangeSet.from_dict(data)
+    assert [f.net_refs for f in loaded.findings] == [(), ()]
+
+
+@pytest.mark.parametrize(
+    "bad", ["p:a", None, ("p:a",), {"p:a": 1}, [""], [None], [5], ["p:a", ""]]
+)
+def test_finding_rejects_bad_net_refs(bad: Any) -> None:
+    data = full_changeset().to_dict()
+    data["findings"][0]["net_refs"] = bad
+    with pytest.raises(ChangeSetError):
+        ChangeSet.from_dict(data)

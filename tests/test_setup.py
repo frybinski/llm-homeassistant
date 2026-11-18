@@ -1,6 +1,8 @@
 """Tests for setup, unload, the panel and the WebSocket API."""
 
+import hashlib
 import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -24,6 +26,10 @@ from custom_components.ai_drafts.changeset import (
 )
 from custom_components.ai_drafts.const import DOMAIN
 
+BUNDLE = (
+    Path(__file__).parent.parent
+    / "custom_components/ai_drafts/frontend/ai-drafts-panel.js"
+)
 API_KEY = "sk-super-secret-key"
 
 OPENAI_DATA = {
@@ -57,7 +63,8 @@ async def test_panel_registered_and_removed(hass: HomeAssistant) -> None:
     assert panel.sidebar_title == "AI Drafts"
     custom = panel.config["_panel_custom"]
     assert custom["name"] == "ai-drafts-panel"
-    assert custom["module_url"] == "/ai_drafts_static/ai-drafts-panel.js?v=0.1.0"
+    digest = hashlib.sha256(BUNDLE.read_bytes()).hexdigest()[:12]
+    assert custom["module_url"] == f"/ai_drafts_static/ai-drafts-panel.js?v={digest}"
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()

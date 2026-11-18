@@ -1,0 +1,18 @@
+{
+  "areas": [
+    {"id": "flur", "name": "Flur", "icon": "mdi:door"},
+    {"id": "wohnzimmer", "name": "Wohnzimmer", "icon": "mdi:sofa"},
+    {"id": "kueche", "name": "Küche", "icon": "mdi:silverware-fork-knife"}
+  ],
+  "entities": [
+    {"entity_id": "binary_sensor.flur_bewegungsmelder", "name": "Bewegungsmelder", "icon": "mdi:motion-sensor", "state": "off", "area_id": "flur"},
+    {"entity_id": "light.flurlicht", "name": "Flurlicht", "icon": "mdi:ceiling-light", "state": "off", "area_id": "flur"},
+    {"entity_id": "media_player.wohnzimmer_tv", "name": "Fernseher", "icon": "mdi:television", "state": "off", "area_id": "wohnzimmer"},
+    {"entity_id": "light.wohnzimmer_deckenlicht", "name": "Deckenlicht", "icon": "mdi:ceiling-light", "state": "on", "area_id": "wohnzimmer"},
+    {"entity_id": "light.wohnzimmer_stehlampe", "name": "Stehlampe", "icon": "mdi:floor-lamp", "state": "off", "area_id": "wohnzimmer"},
+    {"entity_id": "binary_sensor.kueche_bewegungsmelder", "name": "Bewegungsmelder", "icon": "mdi:motion-sensor", "state": "off", "area_id": "kueche"},
+    {"entity_id": "light.kueche_arbeitslicht", "name": "Arbeitslicht", "icon": "mdi:light-recessed", "state": "off", "area_id": "kueche"},
+    {"entity_id": "sun.sun", "name": "Sonne", "icon": "mdi:white-balance-sunny", "state": "above_horizon", "area_id": null},
+    {"entity_id": "input_boolean.nachtmodus", "name": "Nachtmodus", "icon": "mdi:weather-night", "state": "off", "area_id": null}
+  ]
+}

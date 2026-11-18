@@ -1,0 +1,9 @@
+# Development and test requirements for Blaupause.
+pytest-homeassistant-custom-component==0.13.375
+# Not installed by the test plugin, but the manifest depends on `frontend`.
+# Keep in sync with homeassistant/package_constraints.txt of the pinned HA.
+home-assistant-frontend==20260930.5
+# Requirement of `camera`, which the demo integration imports before Home
+# Assistant has installed it on a first start. Same constraints file.
+PyTurboJPEG==1.8.3
+ruff==0.17.5

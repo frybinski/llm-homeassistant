@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Run the same checks as CI (Python and frontend type check).
+set -e
+
+cd "$(dirname "$0")/.."
+
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
+(cd frontend && npm run typecheck)

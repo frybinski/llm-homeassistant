@@ -1,0 +1,64 @@
+# Configuration of the Blaupause development instance.
+#
+# A lean, explicit component list instead of `default_config`, which pulls in
+# bluetooth, usb, cloud and other things that are noise during development.
+
+homeassistant:
+  name: Blaupause Dev
+  country: DE
+  language: de
+  unit_system: metric
+  time_zone: Europe/Berlin
+  currency: EUR
+  latitude: 52.52
+  longitude: 13.405
+  elevation: 34
+
+frontend:
+config:
+sun:
+history:
+logbook:
+lovelace:
+# `ai_task` cannot be configured in YAML (HA rejects it). It loads on its own
+# once an AI integration with an AI Task platform is added via the UI.
+demo:
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+logger:
+  default: warning
+  logs:
+    custom_components.blaupause: debug
+
+# Scenario for milestone M1: "Turn on the hallway light on motion after sunset
+# for 3 minutes". The input_booleans stand in for real hardware; toggle the
+# motion one to simulate movement.
+input_boolean:
+  flur_bewegung_simulation:
+    name: Flur Bewegung (Simulation)
+    icon: mdi:motion-sensor
+  flur_licht_simulation:
+    name: Flur Licht (Simulation)
+    icon: mdi:ceiling-light
+
+template:
+  - binary_sensor:
+      - name: Flur Bewegungsmelder
+        unique_id: blaupause_dev_flur_bewegungsmelder
+        device_class: motion
+        state: "{{ is_state('input_boolean.flur_bewegung_simulation', 'on') }}"
+  - light:
+      - name: Flurlicht
+        unique_id: blaupause_dev_flurlicht
+        state: "{{ is_state('input_boolean.flur_licht_simulation', 'on') }}"
+        turn_on:
+          action: input_boolean.turn_on
+          target:
+            entity_id: input_boolean.flur_licht_simulation
+        turn_off:
+          action: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.flur_licht_simulation

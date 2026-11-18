@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Install everything needed to develop Blaupause.
+set -e
+
+cd "$(dirname "$0")/.."
+
+if command -v uv >/dev/null 2>&1; then
+  [ -d .venv ] || uv venv --python 3.14 .venv
+  uv pip install --python .venv/bin/python -r requirements_dev.txt
+else
+  [ -d .venv ] || python3.14 -m venv .venv
+  .venv/bin/python -m pip install --upgrade pip
+  .venv/bin/python -m pip install -r requirements_dev.txt
+fi
+
+(cd frontend && npm ci && npm run build)

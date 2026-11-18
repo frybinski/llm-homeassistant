@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Start a Home Assistant development instance with Blaupause loaded.
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Files that configuration.yaml includes; HA does not create them itself.
+mkdir -p config
+for file in automations.yaml scripts.yaml scenes.yaml; do
+  [ -f "config/$file" ] || touch "config/$file"
+done
+
+# Make `custom_components` importable from the repository, so the integration
+# is loaded straight from the working tree (no copy or symlink into config/).
+export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${PWD}"
+
+exec .venv/bin/hass --config config --debug

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+
+# Home Assistant dev instance: keep only the checked-in configuration
+config/*
+!config/configuration.yaml
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store

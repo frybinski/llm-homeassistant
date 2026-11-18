@@ -6,4 +6,9 @@ home-assistant-frontend==20260930.5
 # Requirement of `camera`, which the demo integration imports before Home
 # Assistant has installed it on a first start. Same constraints file.
 PyTurboJPEG==1.8.3
+# Requirements of `conversation`, which `ai_task` imports. Without them the
+# AI Task client cannot be tested against the real module.
+gazetteer-matcher==1.1.0
+hassil==3.12.1
+home-assistant-intents==2026.10.6
 ruff==0.17.5

@@ -213,3 +213,68 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 2. M0 umsetzen: Gerüst, Devcontainer, CI, leeres Panel.
 3. Change-Set-Datenmodell und Zustandsautomat mit Tests anlegen.
 4. Am Ende Stand und nächste Schritte in `PLAN.md` nachtragen.
+
+## 12. Stand nach Sitzung 1 (18.11.2026)
+
+### Erledigt
+
+- **Abschnitt 4** gegen Core 2026.10.4 geprüft, Abweichungen dort eingetragen.
+- **M0:**
+  - Die Integration lädt über einen Config Entry.
+  - Der Config Flow bietet ein Menü mit „AI Task“ und „OpenAI-kompatibler Server“. Beide Schritte sagen vor der Entscheidung, welche Daten an das Modell gehen.
+  - Das Panel steht nur für Administratoren in der Seitenleiste. Es zeigt Version und Modellquelle, sonst nichts.
+  - WebSocket-Kommandos `blaupause/info` und `blaupause/changesets/list`, beide nur für Administratoren. Der API-Schlüssel wird nie zurückgegeben.
+  - Dev-Instanz (`config/configuration.yaml`) mit Demo-Integration und Template-Entitäten für das Flur-Szenario: `binary_sensor.flur_bewegungsmelder` und `light.flurlicht`, gesteuert über zwei `input_boolean`.
+  - Devcontainer, Skripte (`scripts/setup`, `develop`, `lint`), CI.
+- **Change Set** (`changeset.py`): Datenmodell nach Abschnitt 3, Zustandsautomat, Speicherung über den HA-Store.
+- **Tests:** 119, davon decken 36 parametrisierte Fälle jede Kombination aus Zustand und Methode ab.
+
+### Abnahme M0
+
+| Kriterium | Ergebnis |
+|---|---|
+| Installation in der Dev-Instanz | Geprüft. Core 2026.10.4 lokal gestartet, Config Entry über die Config-Flow-API angelegt, Zustand `loaded`. Ein Erststart in frischer Umgebung richtet Demo- und Template-Entitäten ohne Neustart ein. |
+| Panel öffnet | Geprüft in Chromium. Seitenleisteneintrag vorhanden, Panel zeigt die Daten aus `blaupause/info`. Deutsch und Englisch, helles und dunkles Theme, schmale Ansicht mit Menüknopf. |
+| CI grün | **Teilweise.** Im ersten Lauf waren `hassfest`, `ruff`, `pytest` und der Frontend-Build grün. Die HACS-Validierung schlug fehl, weil die HACS-Action private Repos grundsätzlich ablehnt. Der Job wird seitdem übersprungen, solange das Repo privat ist. Die HACS-Validierung ist damit noch nie gelaufen. |
+| Devcontainer | **Nicht geprüft.** Er lässt sich in der Sitzungsumgebung nicht starten. Geprüft ist nur, dass das Image `mcr.microsoft.com/devcontainers/python:3.14` existiert und dass `scripts/setup` und `scripts/develop` außerhalb des Containers funktionieren. |
+
+### Festlegungen dieser Sitzung
+
+- **Zustandsautomat.** Die Übergänge stehen als Tabelle `ALLOWED_TRANSITIONS` im Code:
+
+  | Von | Nach |
+  |---|---|
+  | `draft` | `checked`, `failed`, `discarded` |
+  | `checked` | `applied`, `discarded` |
+  | `failed` | `discarded` |
+  | `applied` | `reverted` |
+
+  - Ein Entwurf mit `error`-Befund bleibt nach der Prüfung `draft` und wartet auf die Reparatur (`revise`). Erst ohne Fehler wird er `checked`.
+  - `revise` zählt die Runde und verweigert die vierte (`MAX_REPAIR_ROUNDS = 3`). Die Pipeline ruft dann `fail` auf.
+  - `apply` prüft zusätzlich selbst auf `error`-Befunde, unabhängig vom Status.
+  - `decided` wird bei `apply` und `discard` gesetzt und bleibt bei `revert` unverändert.
+- **Operationen.** `create` braucht `after` und hat kein `before`. `update` braucht `target_id` und `after`. `delete` braucht `target_id` und hat kein `after`. „Kein“ heißt `null`, nicht `{}`.
+- **Frontend-Bundle** ist eingecheckt, damit eine Installation aus dem Repo ohne Build funktioniert. CI baut neu und schlägt fehl, wenn das eingecheckte Bundle abweicht.
+- **Keine Platzhalter-Module.** `context.py`, `drafting.py`, `apply.py`, `journal.py`, `checks/`, `schemas/` und `eval/` entstehen erst mit Inhalt.
+- **Dev-Instanz** mit expliziter Komponentenliste statt `default_config`. `ai_task` lässt sich nicht per YAML laden; eine AI-Task-Entität gibt es erst, wenn in der Instanz eine KI-Integration eingerichtet ist.
+
+### Bekannte Punkte
+
+- **HACS:** Ungeprüft, solange das Repo privat ist (siehe Abnahme). Sobald es öffentlich ist, läuft der Job von selbst. Außerdem sind die Prüfungen `description` und `topics` im Workflow ausgenommen, weil beides in den GitHub-Einstellungen des Repos fehlt. Vor dem HACS-Release setzen und die Ausnahme entfernen.
+- **Lizenz:** Es gibt noch keine `LICENSE`-Datei (Abschnitt 9).
+- **Icon:** `brand/icon.png` ist ein Platzhalter.
+- **Cache des Bundles:** Es wird mit `?v=<Version>` und langen Cache-Headern ausgeliefert. Wer am Panel entwickelt, ohne die Version zu erhöhen, bekommt im Browser das alte Bundle. In M1 auf einen Inhalts-Hash umstellen.
+- **`libturbojpeg`:** Die Dev-Instanz protokolliert beim Start einen Fehler mit Traceback, weil die Systembibliothek fehlt. Betroffen sind nur Kamera-Schnappschüsse der Demo. Im Devcontainer ließe sich `libturbojpeg0` nachinstallieren.
+- **`npm audit`:** meldet eine ReDoS-Lücke in `picomatch`, das über Vite hereinkommt. Betroffen ist nur das Build-Werkzeug, nicht das ausgelieferte Bundle. Die angebotene Korrektur wäre ein Rückschritt auf Vite 6.
+- **Speicher:** Change Sets werden unbegrenzt aufbewahrt. Die Aufbewahrung ist mit dem Protokoll (`journal`) zu klären.
+
+### Nächste Schritte (M1)
+
+1. Name, Domain und Lizenz festlegen (laut Abschnitt 9 vor M1).
+2. Strukturierte Ausgabe über AI Task mit dem Selektor-Schema erproben und danach zwischen AI Task und eigenem Client entscheiden.
+3. `context.py`: Hausmodell aus den Registern und den bestehenden Automationen, Ausschnittwahl mit Obergrenze.
+4. `drafting.py`: Modellaufruf, Ergebnis als Change Set.
+5. `checks/validity.py`: Stufe A, dazu die Reparaturschleife auf `complete_check`, `revise` und `fail`.
+6. `apply.py`: Schreibweg entscheiden (Abschnitt 4, „Offen für M1“), Schnappschuss, Rückgängig.
+7. Panel: Eingabe, Verlauf, Befunde, Diff, Übernehmen, Verwerfen, samt der WebSocket-Kommandos dafür.
+8. `journal.py` und der Beginn des Eval-Satzes.

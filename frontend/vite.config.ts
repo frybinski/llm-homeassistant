@@ -4,15 +4,15 @@ import { defineConfig } from "vite";
 // file and appends ?v=<version> as the cache buster. Lit is bundled in.
 export default defineConfig({
   build: {
-    outDir: "../custom_components/blaupause/frontend",
+    outDir: "../custom_components/ai_drafts/frontend",
     emptyOutDir: true,
     sourcemap: false,
     minify: true,
     target: "es2022",
     lib: {
-      entry: "src/blaupause-panel.ts",
+      entry: "src/ai-drafts-panel.ts",
       formats: ["es"],
-      fileName: () => "blaupause-panel.js",
+      fileName: () => "ai-drafts-panel.js",
     },
   },
 });

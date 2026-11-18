@@ -40,8 +40,8 @@ OPENAI_COMPATIBLE_SCHEMA = vol.Schema(
 )
 
 
-class BlaupauseConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle the config flow for Blaupause."""
+class AIDraftsConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle the config flow for AI Drafts."""
 
     VERSION = 1
 
@@ -60,7 +60,7 @@ class BlaupauseConfigFlow(ConfigFlow, domain=DOMAIN):
         """Use a Home Assistant AI Task entity."""
         if user_input is not None:
             return self.async_create_entry(
-                title="Blaupause",
+                title="AI Drafts",
                 data={
                     CONF_MODEL_SOURCE: MODEL_SOURCE_AI_TASK,
                     # None means: use Home Assistant's preferred AI Task entity.
@@ -82,7 +82,7 @@ class BlaupauseConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_BASE_URL] = "invalid_url"
             else:
                 return self.async_create_entry(
-                    title="Blaupause",
+                    title="AI Drafts",
                     data={
                         CONF_MODEL_SOURCE: MODEL_SOURCE_OPENAI_COMPATIBLE,
                         CONF_BASE_URL: base_url,

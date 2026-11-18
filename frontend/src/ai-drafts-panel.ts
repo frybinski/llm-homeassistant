@@ -1,13 +1,13 @@
 import { LitElement, css, html } from "lit";
 import { type Strings, getStrings } from "./localize";
-import type { BlaupauseInfo, HomeAssistant, PanelInfo, Route } from "./types";
+import type { AIDraftsInfo, HomeAssistant, PanelInfo, Route } from "./types";
 
 type LoadState =
   | { status: "loading" }
-  | { status: "ready"; info: BlaupauseInfo }
+  | { status: "ready"; info: AIDraftsInfo }
   | { status: "error"; message: string };
 
-class BlaupausePanel extends LitElement {
+class AIDraftsPanel extends LitElement {
   static override properties = {
     hass: { attribute: false },
     narrow: { type: Boolean },
@@ -40,8 +40,8 @@ class BlaupausePanel extends LitElement {
   private async _load(): Promise<void> {
     this._state = { status: "loading" };
     try {
-      const info = await this.hass.callWS<BlaupauseInfo>({
-        type: "blaupause/info",
+      const info = await this.hass.callWS<AIDraftsInfo>({
+        type: "ai_drafts/info",
       });
       this._state = { status: "ready", info };
     } catch (err) {
@@ -180,4 +180,4 @@ class BlaupausePanel extends LitElement {
   `;
 }
 
-customElements.define("blaupause-panel", BlaupausePanel);
+customElements.define("ai-drafts-panel", AIDraftsPanel);

@@ -1,5 +1,5 @@
 [project]
-name = "blaupause"
+name = "ai-drafts"
 version = "0.1.0"
 description = "LLM-assisted design tool for Home Assistant automations and dashboards"
 requires-python = ">=3.14"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start a Home Assistant development instance with Blaupause loaded.
+# Start a Home Assistant development instance with AI Drafts loaded.
 set -e
 
 cd "$(dirname "$0")/.."

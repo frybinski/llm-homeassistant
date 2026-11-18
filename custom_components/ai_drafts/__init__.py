@@ -1,4 +1,4 @@
-"""The Blaupause integration: LLM-assisted design of Home Assistant configuration."""
+"""The AI Drafts integration: LLM-assisted design of Home Assistant configuration."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-type BlaupauseConfigEntry = ConfigEntry[ChangeSetStore]
+type AIDraftsConfigEntry = ConfigEntry[ChangeSetStore]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -51,11 +51,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BlaupauseConfigEntry) -> bool:
-    """Set up Blaupause from a config entry."""
+async def async_setup_entry(hass: HomeAssistant, entry: AIDraftsConfigEntry) -> bool:
+    """Set up AI Drafts from a config entry."""
     if AwesomeVersion(HA_VERSION) < AwesomeVersion(MIN_HA_VERSION):
         raise ConfigEntryError(
-            f"Blaupause requires Home Assistant {MIN_HA_VERSION} or newer, "
+            f"AI Drafts requires Home Assistant {MIN_HA_VERSION} or newer, "
             f"but this is {HA_VERSION}"
         )
 
@@ -76,7 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: BlaupauseConfigEntry) ->
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BlaupauseConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: AIDraftsConfigEntry) -> bool:
     """Unload a config entry and remove the sidebar panel."""
     frontend.async_remove_panel(hass, PANEL_URL_PATH)
     return True

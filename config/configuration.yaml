@@ -1,10 +1,10 @@
-# Configuration of the Blaupause development instance.
+# Configuration of the AI Drafts development instance.
 #
 # A lean, explicit component list instead of `default_config`, which pulls in
 # bluetooth, usb, cloud and other things that are noise during development.
 
 homeassistant:
-  name: Blaupause Dev
+  name: AI Drafts Dev
   country: DE
   language: de
   unit_system: metric
@@ -31,7 +31,7 @@ scene: !include scenes.yaml
 logger:
   default: warning
   logs:
-    custom_components.blaupause: debug
+    custom_components.ai_drafts: debug
 
 # Scenario for milestone M1: "Turn on the hallway light on motion after sunset
 # for 3 minutes". The input_booleans stand in for real hardware; toggle the
@@ -47,12 +47,12 @@ input_boolean:
 template:
   - binary_sensor:
       - name: Flur Bewegungsmelder
-        unique_id: blaupause_dev_flur_bewegungsmelder
+        unique_id: ai_drafts_dev_flur_bewegungsmelder
         device_class: motion
         state: "{{ is_state('input_boolean.flur_bewegung_simulation', 'on') }}"
   - light:
       - name: Flurlicht
-        unique_id: blaupause_dev_flurlicht
+        unique_id: ai_drafts_dev_flurlicht
         state: "{{ is_state('input_boolean.flur_licht_simulation', 'on') }}"
         turn_on:
           action: input_boolean.turn_on

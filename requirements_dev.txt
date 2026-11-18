@@ -1,4 +1,4 @@
-# Development and test requirements for Blaupause.
+# Development and test requirements for AI Drafts.
 pytest-homeassistant-custom-component==0.13.375
 # Not installed by the test plugin, but the manifest depends on `frontend`.
 # Keep in sync with homeassistant/package_constraints.txt of the pinned HA.

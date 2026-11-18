@@ -7,7 +7,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 import pytest
 
-from custom_components.blaupause.changeset import (
+from custom_components.ai_drafts.changeset import (
     STORAGE_KEY,
     ChangeSet,
     ChangeSetError,

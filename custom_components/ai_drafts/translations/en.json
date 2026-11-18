@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "AI Drafts: choose a model source",
+        "description": "AI Drafts asks a language model to draft automations. The model never changes your configuration; it only makes proposals that you review and approve. Where should the model come from?",
+        "menu_options": {
+          "ai_task": "Home Assistant AI Task",
+          "openai_compatible": "OpenAI-compatible server (for example Ollama)"
+        }
+      },
+      "ai_task": {
+        "title": "Use a Home Assistant AI Task entity",
+        "description": "**Data that leaves your installation:** with every request, AI Drafts sends your request text together with the names, IDs and states of the entities, devices and areas it considers relevant, and the existing automations, to the AI Task entity you choose. Where that data ends up depends on the integration behind the entity: a cloud service such as OpenAI or Google receives it over the internet, a local model keeps it on your network.\n\nLeave the field empty to use the AI Task entity that Home Assistant has set as preferred.",
+        "data": {
+          "ai_task_entity": "AI Task entity"
+        },
+        "data_description": {
+          "ai_task_entity": "Optional. Empty means the preferred AI Task entity of Home Assistant."
+        }
+      },
+      "openai_compatible": {
+        "title": "Use an OpenAI-compatible server",
+        "description": "**Data that leaves your installation:** with every request, AI Drafts sends your request text together with the names, IDs and states of the entities, devices and areas it considers relevant, and the existing automations, to the server at the address below. If that server is on your own network, the data stays there. If it is a cloud service, the data is sent over the internet to that provider.\n\nThe connection is not tested in this step.",
+        "data": {
+          "base_url": "Base URL",
+          "api_key": "API key",
+          "model": "Model"
+        },
+        "data_description": {
+          "base_url": "For example http://localhost:11434/v1 for Ollama.",
+          "api_key": "Optional. Local servers such as Ollama usually need none.",
+          "model": "Name of the model to use, for example llama3.1."
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "This is not a valid URL. Include the scheme, for example http://localhost:11434/v1."
+    },
+    "abort": {
+      "single_instance_allowed": "AI Drafts is already set up. Only one instance is allowed."
+    }
+  }
+}

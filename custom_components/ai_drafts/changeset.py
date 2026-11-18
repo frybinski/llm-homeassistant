@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 MAX_REPAIR_ROUNDS: Final = 3
-STORAGE_KEY: Final = "blaupause.changesets"
+STORAGE_KEY: Final = "ai_drafts.changesets"
 STORAGE_VERSION: Final = 1
 ID_PREFIX: Final = "cs_"
 PIPELINE_CHECK: Final = "pipeline"
@@ -362,7 +362,7 @@ class ChangeSet:
 
 
 class ChangeSetStore:
-    """Persist change sets in ``.storage/blaupause.changesets``."""
+    """Persist change sets in ``.storage/ai_drafts.changesets``."""
 
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize an empty store; call ``async_load`` before use."""

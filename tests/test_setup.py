@@ -15,14 +15,14 @@ from pytest_homeassistant_custom_component.typing import (
     WebSocketGenerator,
 )
 
-from custom_components.blaupause.changeset import (
+from custom_components.ai_drafts.changeset import (
     STORAGE_KEY,
     ChangeSet,
     Operation,
     OperationKind,
     OperationType,
 )
-from custom_components.blaupause.const import DOMAIN
+from custom_components.ai_drafts.const import DOMAIN
 
 API_KEY = "sk-super-secret-key"
 
@@ -36,7 +36,7 @@ AI_TASK_DATA = {"model_source": "ai_task", "ai_task_entity": "ai_task.my_model"}
 
 
 def make_entry(data: dict[str, Any]) -> MockConfigEntry:
-    return MockConfigEntry(domain=DOMAIN, data=data, title="Blaupause")
+    return MockConfigEntry(domain=DOMAIN, data=data, title="AI Drafts")
 
 
 async def setup_entry(hass: HomeAssistant, data: dict[str, Any]) -> MockConfigEntry:
@@ -51,23 +51,23 @@ async def setup_entry(hass: HomeAssistant, data: dict[str, Any]) -> MockConfigEn
 async def test_panel_registered_and_removed(hass: HomeAssistant) -> None:
     entry = await setup_entry(hass, OPENAI_DATA)
 
-    panel = hass.data[DATA_PANELS]["blaupause"]
+    panel = hass.data[DATA_PANELS]["ai-drafts"]
     assert panel.require_admin is True
     assert panel.sidebar_icon == "mdi:floor-plan"
-    assert panel.sidebar_title == "Blaupause"
+    assert panel.sidebar_title == "AI Drafts"
     custom = panel.config["_panel_custom"]
-    assert custom["name"] == "blaupause-panel"
-    assert custom["module_url"] == "/blaupause_static/blaupause-panel.js?v=0.1.0"
+    assert custom["name"] == "ai-drafts-panel"
+    assert custom["module_url"] == "/ai_drafts_static/ai-drafts-panel.js?v=0.1.0"
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert "blaupause" not in hass.data[DATA_PANELS]
+    assert "ai-drafts" not in hass.data[DATA_PANELS]
 
     # Reload brings it back (static path and commands are registered only once).
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    assert "blaupause" in hass.data[DATA_PANELS]
+    assert "ai-drafts" in hass.data[DATA_PANELS]
 
 
 async def test_bundle_is_served(
@@ -75,19 +75,19 @@ async def test_bundle_is_served(
 ) -> None:
     await setup_entry(hass, OPENAI_DATA)
     client = await hass_client_no_auth()
-    response = await client.get("/blaupause_static/blaupause-panel.js")
+    response = await client.get("/ai_drafts_static/ai-drafts-panel.js")
     assert response.status == 200
-    assert "blaupause-panel" in await response.text()
+    assert "ai-drafts-panel" in await response.text()
 
 
 async def test_refuses_old_home_assistant(hass: HomeAssistant) -> None:
     entry = make_entry(OPENAI_DATA)
     entry.add_to_hass(hass)
-    with patch("custom_components.blaupause.HA_VERSION", "2026.9.9"):
+    with patch("custom_components.ai_drafts.HA_VERSION", "2026.9.9"):
         assert not await hass.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_ERROR
     assert "2026.10.0" in (entry.reason or "")
-    assert "blaupause" not in hass.data[DATA_PANELS]
+    assert "ai-drafts" not in hass.data[DATA_PANELS]
 
 
 async def test_info_for_openai_source(
@@ -95,7 +95,7 @@ async def test_info_for_openai_source(
 ) -> None:
     await setup_entry(hass, OPENAI_DATA)
     client = await hass_ws_client(hass)
-    await client.send_json_auto_id({"type": "blaupause/info"})
+    await client.send_json_auto_id({"type": "ai_drafts/info"})
     response = await client.receive_json()
     assert response["success"]
     assert response["result"] == {
@@ -111,7 +111,7 @@ async def test_info_for_ai_task_source(
 ) -> None:
     await setup_entry(hass, AI_TASK_DATA)
     client = await hass_ws_client(hass)
-    await client.send_json_auto_id({"type": "blaupause/info"})
+    await client.send_json_auto_id({"type": "ai_drafts/info"})
     response = await client.receive_json()
     assert response["result"] == {
         "version": "0.1.0",
@@ -125,7 +125,7 @@ async def test_info_for_preferred_ai_task(
 ) -> None:
     await setup_entry(hass, {"model_source": "ai_task", "ai_task_entity": None})
     client = await hass_ws_client(hass)
-    await client.send_json_auto_id({"type": "blaupause/info"})
+    await client.send_json_auto_id({"type": "ai_drafts/info"})
     response = await client.receive_json()
     assert response["result"]["model"] is None
 
@@ -151,7 +151,7 @@ async def test_changesets_list_newest_first(
     await setup_entry(hass, OPENAI_DATA)
 
     client = await hass_ws_client(hass)
-    await client.send_json_auto_id({"type": "blaupause/changesets/list"})
+    await client.send_json_auto_id({"type": "ai_drafts/changesets/list"})
     response = await client.receive_json()
     assert response["success"]
     assert [cs["request"] for cs in response["result"]] == ["newer", "older"]
@@ -159,7 +159,7 @@ async def test_changesets_list_newest_first(
     assert API_KEY not in json.dumps(response)
 
 
-@pytest.mark.parametrize("command", ["blaupause/info", "blaupause/changesets/list"])
+@pytest.mark.parametrize("command", ["ai_drafts/info", "ai_drafts/changesets/list"])
 async def test_commands_are_admin_only(
     hass: HomeAssistant,
     hass_ws_client: WebSocketGenerator,
@@ -174,7 +174,7 @@ async def test_commands_are_admin_only(
     assert response["error"]["code"] == "unauthorized"
 
 
-@pytest.mark.parametrize("command", ["blaupause/info", "blaupause/changesets/list"])
+@pytest.mark.parametrize("command", ["ai_drafts/info", "ai_drafts/changesets/list"])
 async def test_commands_error_when_entry_not_loaded(
     hass: HomeAssistant, hass_ws_client: WebSocketGenerator, command: str
 ) -> None:

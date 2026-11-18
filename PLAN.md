@@ -1,6 +1,6 @@
 # Plan: LLM-gestütztes Entwurfswerkzeug für Home Assistant
 
-Arbeitstitel: **Blaupause** (Domain `blaupause`). Name und Domain sind vorläufig und vor dem ersten Release festzulegen.
+Name: **AI Drafts** (Domain `ai_drafts`), festgelegt am 18.11.2026. Der frühere Arbeitstitel war „Blaupause“.
 
 Stand: 18.11.2026. Dieses Dokument ist der Einstieg für die Entwicklungssitzung. Es liegt im Repo als `PLAN.md` und wird dort fortgeschrieben.
 
@@ -92,7 +92,7 @@ Zustände: `draft -> checked -> applied -> reverted`, daneben `failed` und `disc
 - **Probatio statt voluptuous.** Seit Core 2026.9 läuft die Schema-Validierung auf `probatio`. Der Core importiert `probatio` direkt, `import voluptuous as vol` wird beim Start auf Probatio umgeleitet und funktioniert unverändert weiter ([Entwickler-Blog vom 30.09.2026](https://developers.home-assistant.io/blog/2026/09/30/probatio-validation-engine)). Wir bleiben beim `voluptuous`-Import, das funktioniert auf alten und neuen Versionen.
 - **Python 3.14.** Core 2026.10 und 2026.11 setzen Python 3.14 voraus. Tests und Devcontainer laufen auf 3.14.
 - **Mindestversion.** `manifest.json` kennt kein Feld für eine HA-Mindestversion. Sie steht in `hacs.json` (`homeassistant`) und wird zusätzlich beim Setup zur Laufzeit geprüft. Festgelegt auf 2026.10.0, weil gegen diese Linie getestet wird.
-- **Brand-Bilder.** Seit Core 2026.3 liefern Custom Integrations ihr Icon selbst aus: `custom_components/blaupause/brand/icon.png` ([Entwickler-Blog vom 24.02.2026](https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api)). Die HACS-Validierung prüft dieses Verzeichnis.
+- **Brand-Bilder.** Seit Core 2026.3 liefern Custom Integrations ihr Icon selbst aus: `custom_components/ai_drafts/brand/icon.png` ([Entwickler-Blog vom 24.02.2026](https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api)). Die HACS-Validierung prüft dieses Verzeichnis.
 - **HACS-Validierung.** Die Prüfungen `description` und `topics` hängen an den GitHub-Repo-Einstellungen, nicht am Code. Beides ist im Repo noch nicht gesetzt.
 
 ### Offen für M1
@@ -126,7 +126,7 @@ Stufe C arbeitet auf einer Zwischendarstellung (Auslöser, Bedingungen, gelesene
 ## 6. Repo-Struktur
 
 ```
-custom_components/blaupause/
+custom_components/ai_drafts/
   __init__.py  manifest.json  config_flow.py  const.py
   websocket.py  context.py  drafting.py  changeset.py
   apply.py  journal.py
@@ -192,7 +192,7 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 
 | Frage | Vorschlag |
 |---|---|
-| Name und Domain | vor M1 festlegen |
+| Name und Domain | **Entschieden (18.11.2026): AI Drafts, Domain `ai_drafts`.** |
 | Modell für die Entwicklung | Claude bis M4, Ollama als Härtetest in M5 |
 | Modellanbindung | AI Task, falls strukturierte Ausgabe dort ausreicht, sonst eigener Client |
 | Lizenz | **Entschieden (18.11.2026): MIT.** |
@@ -223,7 +223,7 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
   - Die Integration lädt über einen Config Entry.
   - Der Config Flow bietet ein Menü mit „AI Task“ und „OpenAI-kompatibler Server“. Beide Schritte sagen vor der Entscheidung, welche Daten an das Modell gehen.
   - Das Panel steht nur für Administratoren in der Seitenleiste. Es zeigt Version und Modellquelle, sonst nichts.
-  - WebSocket-Kommandos `blaupause/info` und `blaupause/changesets/list`, beide nur für Administratoren. Der API-Schlüssel wird nie zurückgegeben.
+  - WebSocket-Kommandos `ai_drafts/info` und `ai_drafts/changesets/list`, beide nur für Administratoren. Der API-Schlüssel wird nie zurückgegeben.
   - Dev-Instanz (`config/configuration.yaml`) mit Demo-Integration und Template-Entitäten für das Flur-Szenario: `binary_sensor.flur_bewegungsmelder` und `light.flurlicht`, gesteuert über zwei `input_boolean`.
   - Devcontainer, Skripte (`scripts/setup`, `develop`, `lint`), CI.
 - **Change Set** (`changeset.py`): Datenmodell nach Abschnitt 3, Zustandsautomat, Speicherung über den HA-Store.
@@ -234,12 +234,13 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 | Kriterium | Ergebnis |
 |---|---|
 | Installation in der Dev-Instanz | Geprüft. Core 2026.10.4 lokal gestartet, Config Entry über die Config-Flow-API angelegt, Zustand `loaded`. Ein Erststart in frischer Umgebung richtet Demo- und Template-Entitäten ohne Neustart ein. |
-| Panel öffnet | Geprüft in Chromium. Seitenleisteneintrag vorhanden, Panel zeigt die Daten aus `blaupause/info`. Deutsch und Englisch, helles und dunkles Theme, schmale Ansicht mit Menüknopf. |
+| Panel öffnet | Geprüft in Chromium. Seitenleisteneintrag vorhanden, Panel zeigt die Daten aus `ai_drafts/info`. Deutsch und Englisch, helles und dunkles Theme, schmale Ansicht mit Menüknopf. |
 | CI grün | Geprüft. Im ersten Lauf lehnte die HACS-Action das damals private Repo ab. Seit das Repo öffentlich ist, sind alle fünf Jobs grün: `hassfest`, HACS, `ruff`, `pytest` und der Frontend-Build. Bei HACS sind die Prüfungen `description` und `topics` ausgenommen. |
 | Devcontainer | **Nicht geprüft.** Er lässt sich in der Sitzungsumgebung nicht starten. Geprüft ist nur, dass das Image `mcr.microsoft.com/devcontainers/python:3.14` existiert und dass `scripts/setup` und `scripts/develop` außerhalb des Containers funktionieren. |
 
 ### Festlegungen dieser Sitzung
 
+- **Name und Bezeichner.** Name „AI Drafts“, Domain `ai_drafts`, Panel unter `/ai-drafts`, Speicher in `.storage/ai_drafts.changesets`. Frontend-Bezeichner tragen Bindestriche (`ai-drafts-panel`), alles im Backend Unterstriche.
 - **Zustandsautomat.** Die Übergänge stehen als Tabelle `ALLOWED_TRANSITIONS` im Code:
 
   | Von | Nach |
@@ -268,7 +269,7 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 
 ### Nächste Schritte (M1)
 
-1. Name und Domain festlegen (laut Abschnitt 9 vor M1). Die Lizenz ist entschieden: MIT.
+1. Abgrenzung in Abschnitt 1 prüfen. Laut ihren eigenen Beschreibungen arbeiten Helmsman und AI Agent HA ebenfalls mit Freigabe vor dem Schreiben, Helmsman zusätzlich mit Diff und Schnappschüssen. Das ist nicht in den Repos nachgeprüft. Wenn es stimmt, bleiben als Unterscheidung die deterministische Prüfschicht und die Konfliktanalyse.
 2. Strukturierte Ausgabe über AI Task mit dem Selektor-Schema erproben und danach zwischen AI Task und eigenem Client entscheiden.
 3. `context.py`: Hausmodell aus den Registern und den bestehenden Automationen, Ausschnittwahl mit Obergrenze.
 4. `drafting.py`: Modellaufruf, Ergebnis als Change Set.

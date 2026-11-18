@@ -1,10 +1,10 @@
 {
-  "name": "blaupause-frontend",
+  "name": "ai-drafts-frontend",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Sidebar panel of the Blaupause Home Assistant integration",
+  "description": "Sidebar panel of the AI Drafts Home Assistant integration",
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit"

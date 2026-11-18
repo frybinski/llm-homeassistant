@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install everything needed to develop Blaupause.
+# Install everything needed to develop AI Drafts.
 set -e
 
 cd "$(dirname "$0")/.."

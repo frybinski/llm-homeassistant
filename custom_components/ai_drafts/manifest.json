@@ -1,6 +1,6 @@
 {
-  "domain": "blaupause",
-  "name": "Blaupause",
+  "domain": "ai_drafts",
+  "name": "AI Drafts",
   "after_dependencies": ["ai_task"],
   "codeowners": ["@frybinski"],
   "config_flow": true,

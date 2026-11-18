@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from custom_components.blaupause.changeset import (
+from custom_components.ai_drafts.changeset import (
     ALLOWED_TRANSITIONS,
     MAX_REPAIR_ROUNDS,
     ApplyBlockedError,

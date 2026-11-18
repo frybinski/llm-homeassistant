@@ -1,5 +1,5 @@
 const EN = {
-  title: "Blaupause",
+  title: "AI Drafts",
   version: "Version",
   modelSource: "Model source",
   model: "Model",
@@ -8,14 +8,14 @@ const EN = {
   preferredAiTask: "preferred AI Task entity",
   empty: "No proposals yet.",
   loading: "Loading…",
-  error: "Could not load Blaupause information.",
+  error: "Could not load AI Drafts information.",
   retry: "Retry",
 };
 
 export type Strings = typeof EN;
 
 const DE: Strings = {
-  title: "Blaupause",
+  title: "AI Drafts",
   version: "Version",
   modelSource: "Modellquelle",
   model: "Modell",
@@ -24,7 +24,7 @@ const DE: Strings = {
   preferredAiTask: "bevorzugte AI-Task-Entität",
   empty: "Noch keine Vorschläge.",
   loading: "Lädt…",
-  error: "Blaupause-Informationen konnten nicht geladen werden.",
+  error: "Die Informationen zu AI Drafts konnten nicht geladen werden.",
   retry: "Erneut versuchen",
 };
 

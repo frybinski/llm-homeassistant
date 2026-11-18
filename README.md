@@ -1,4 +1,4 @@
-# Blaupause
+# AI Drafts
 
 A Home Assistant custom integration for designing automations (and later
 dashboards) in natural language. The model never writes configuration directly:
@@ -6,7 +6,7 @@ it produces a *change set*, deterministic checks validate it, and you approve it
 before anything is written.
 
 **Status: pre-alpha (milestone M0).** The integration installs, offers a choice
-of model source, and adds an almost empty "Blaupause" panel to the sidebar. The
+of model source, and adds an almost empty "AI Drafts" panel to the sidebar. The
 change set data model and its state machine exist, but nothing calls a model yet.
 See [PLAN.md](PLAN.md) for the plan (in German).
 
@@ -32,7 +32,7 @@ scripts/lint      # ruff and the frontend type check
 The dev instance (`config/configuration.yaml`) loads a small set of components,
 the demo integration, and template entities for the hallway scenario of
 milestone M1 (`binary_sensor.flur_bewegungsmelder`, `light.flurlicht`). Complete
-onboarding, then add the Blaupause integration under Settings, Devices &
+onboarding, then add the AI Drafts integration under Settings, Devices &
 services.
 
 ### Tests
@@ -44,7 +44,7 @@ services.
 ### Frontend
 
 The panel is Lit and TypeScript in `frontend/`. The built bundle
-`custom_components/blaupause/frontend/blaupause-panel.js` is checked in; CI fails
+`custom_components/ai_drafts/frontend/ai-drafts-panel.js` is checked in; CI fails
 if it is out of date.
 
 ```bash

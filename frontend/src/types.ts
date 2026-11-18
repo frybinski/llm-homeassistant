@@ -14,8 +14,8 @@ export interface Route {
   prefix: string;
 }
 
-/** Result of the `blaupause/info` WebSocket command. */
-export interface BlaupauseInfo {
+/** Result of the `ai_drafts/info` WebSocket command. */
+export interface AIDraftsInfo {
   version: string;
   model_source: "ai_task" | "openai_compatible" | null;
   model: string | null;

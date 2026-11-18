@@ -1,10 +1,10 @@
-"""Constants for the Blaupause integration."""
+"""Constants for the AI Drafts integration."""
 
 from __future__ import annotations
 
 from typing import Final
 
-DOMAIN: Final = "blaupause"
+DOMAIN: Final = "ai_drafts"
 
 # Oldest Home Assistant release this integration is developed and tested against.
 MIN_HA_VERSION: Final = "2026.10.0"
@@ -21,12 +21,12 @@ MODEL_SOURCE_AI_TASK: Final = "ai_task"
 MODEL_SOURCE_OPENAI_COMPATIBLE: Final = "openai_compatible"
 
 # Sidebar panel.
-PANEL_URL_PATH: Final = "blaupause"
-PANEL_TITLE: Final = "Blaupause"
+PANEL_URL_PATH: Final = "ai-drafts"
+PANEL_TITLE: Final = "AI Drafts"
 PANEL_ICON: Final = "mdi:floor-plan"
-PANEL_COMPONENT_NAME: Final = "blaupause-panel"
-PANEL_BUNDLE_FILE: Final = "blaupause-panel.js"
-PANEL_STATIC_URL: Final = "/blaupause_static"
+PANEL_COMPONENT_NAME: Final = "ai-drafts-panel"
+PANEL_BUNDLE_FILE: Final = "ai-drafts-panel.js"
+PANEL_STATIC_URL: Final = "/ai_drafts_static"
 
 # WebSocket command types.
 WS_TYPE_INFO: Final = f"{DOMAIN}/info"

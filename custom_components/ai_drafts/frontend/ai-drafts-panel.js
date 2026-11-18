@@ -509,7 +509,7 @@ var de = Q.litElementPolyfillSupport;
 de?.({ LitElement: $ }), (Q.litElementVersions ??= []).push("4.2.2");
 // src/localize.ts
 var fe = {
-	title: "Blaupause",
+	title: "AI Drafts",
 	version: "Version",
 	modelSource: "Model source",
 	model: "Model",
@@ -518,10 +518,10 @@ var fe = {
 	preferredAiTask: "preferred AI Task entity",
 	empty: "No proposals yet.",
 	loading: "Loading…",
-	error: "Could not load Blaupause information.",
+	error: "Could not load AI Drafts information.",
 	retry: "Retry"
 }, pe = {
-	title: "Blaupause",
+	title: "AI Drafts",
 	version: "Version",
 	modelSource: "Modellquelle",
 	model: "Modell",
@@ -530,13 +530,13 @@ var fe = {
 	preferredAiTask: "bevorzugte AI-Task-Entität",
 	empty: "Noch keine Vorschläge.",
 	loading: "Lädt…",
-	error: "Blaupause-Informationen konnten nicht geladen werden.",
+	error: "Die Informationen zu AI Drafts konnten nicht geladen werden.",
 	retry: "Erneut versuchen"
 };
 function me(e) {
 	return e?.toLowerCase().startsWith("de") ? pe : fe;
 }
-// src/blaupause-panel.ts
+// src/ai-drafts-panel.ts
 var he = class extends $ {
 	static {
 		this.properties = {
@@ -556,7 +556,7 @@ var he = class extends $ {
 	async _load() {
 		this._state = { status: "loading" };
 		try {
-			let e = await this.hass.callWS({ type: "blaupause/info" });
+			let e = await this.hass.callWS({ type: "ai_drafts/info" });
 			this._state = {
 				status: "ready",
 				info: e
@@ -683,4 +683,4 @@ var he = class extends $ {
   `;
 	}
 };
-customElements.define("blaupause-panel", he);
+customElements.define("ai-drafts-panel", he);

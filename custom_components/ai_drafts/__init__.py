@@ -16,6 +16,7 @@ from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
+from .apply import SnapshotStore
 from .changeset import ChangeSetStore
 from .const import (
     DOMAIN,
@@ -27,13 +28,15 @@ from .const import (
     PANEL_TITLE,
     PANEL_URL_PATH,
 )
+from .data import AIDraftsData
+from .journal import Journal
 from .websocket import async_register_websocket_commands
 
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-type AIDraftsConfigEntry = ConfigEntry[ChangeSetStore]
+type AIDraftsConfigEntry = ConfigEntry[AIDraftsData]
 
 
 def _content_hash(path: Path) -> str:
@@ -64,9 +67,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: AIDraftsConfigEntry) -> 
             f"but this is {HA_VERSION}"
         )
 
-    store = ChangeSetStore(hass)
-    await store.async_load()
-    entry.runtime_data = store
+    changesets = ChangeSetStore(hass)
+    journal = Journal(hass)
+    snapshots = SnapshotStore(hass)
+    await changesets.async_load()
+    await journal.async_load()
+    await snapshots.async_load()
+    entry.runtime_data = AIDraftsData(
+        entry=entry, changesets=changesets, journal=journal, snapshots=snapshots
+    )
 
     # The static path sends long cache headers, so the URL must change whenever
     # the bundle does: version the URL by the content of the file.

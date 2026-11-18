@@ -4,7 +4,7 @@
   "after_dependencies": ["ai_task"],
   "codeowners": ["@frybinski"],
   "config_flow": true,
-  "dependencies": ["frontend", "http", "panel_custom", "websocket_api"],
+  "dependencies": ["automation", "frontend", "http", "panel_custom", "websocket_api"],
   "documentation": "https://github.com/frybinski/llm-homeassistant",
   "integration_type": "service",
   "iot_class": "calculated",

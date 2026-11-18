@@ -35,6 +35,20 @@ milestone M1 (`binary_sensor.flur_bewegungsmelder`, `light.flurlicht`). Complete
 onboarding, then add the AI Drafts integration under Settings, Devices &
 services.
 
+### Developing without a model
+
+`scripts/fake_model.py` is a tiny OpenAI-compatible server (port 11435) that
+answers with canned change sets, so the whole pipeline can be tried in the dev
+instance without a language model. Start it with
+`.venv/bin/python scripts/fake_model.py`, then add AI Drafts with the
+"OpenAI-compatible server" source, base URL `http://127.0.0.1:11435/v1`, any
+model name and no API key. Words in the request choose the answer: "Flurlicht"
+gives a valid automation, "Gartenlicht" first an invalid one and a valid one
+after one repair round, "Bad" an invalid one every time (the change set ends
+`failed`), "kaputt" text that is not JSON once and then a valid answer. The
+docstring of the script has the details. It says nothing about how a real model
+behaves.
+
 ### Tests
 
 ```bash

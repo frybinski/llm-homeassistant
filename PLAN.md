@@ -17,6 +17,8 @@ Abgrenzung zu vorhandenen Lösungen (ha-mcp, AI Agent HA, Selora AI):
 - Das Modell schreibt nie direkt in die Konfiguration. Es erzeugt einen Änderungsvorschlag. Eine deterministische Prüfschicht validiert ihn, der Mensch sieht eine Vorschau und entscheidet.
 - Automationen werden in ein Netz überführt. Auf diesem Netz arbeiten die Konfliktanalyse und die Domänenansicht.
 
+Abgrenzung zu Node-RED, AppDaemon und Pyscript: Das sind eigene Automationssysteme, die ihre Abläufe selbst ausführen. AI Drafts führt nichts aus. Es entstehen normale Home-Assistant-Automationen, die auch ohne AI Drafts weiterlaufen. Was diese Systeme im Haus schalten, sieht AI Drafts nur eingeschränkt (Abschnitt 4, „Externe Automationsquellen“).
+
 ## 2. Leitprinzipien
 
 1. **Vorschlag statt Aktion.** Jede Änderung ist ein Change Set mit Status. Geschrieben wird erst nach Bestätigung.
@@ -120,6 +122,25 @@ Drei Einsatzstellen im Panel:
 
 Dashboards haben kein Verhalten. Für sie bleibt die Live-Vorschau die Darstellung.
 
+### Externe Automationsquellen
+
+Flows in Node-RED und Apps in AppDaemon oder Pyscript sind keine Home-Assistant-Automationen und tauchen im Netz nicht auf. Ohne Gegenmaßnahme wäre die Konfliktanalyse dort unvollständig, ohne dass man es sieht. Ziel ist deshalb zuerst, die Lücke sichtbar zu machen, und erst danach, sie zu schließen.
+
+Grundlage, am 18.11.2026 gegen Core 2026.10.4 geprüft: Jede Zustandsänderung trägt einen Kontext. Läuft eine Home-Assistant-Automation, hängt der Kontext am Auslöser und hat keinen Benutzer. Kommt ein Aufruf über die API oder den WebSocket, trägt der Kontext den Benutzer der Verbindung. Der Recorder speichert beides.
+
+Drei Stufen:
+
+1. **Beobachten.** Aus dem Verlauf wird je Entität abgeleitet, wer sie schreibt: eine Home-Assistant-Automation, ein Mensch oder eine Quelle von außen. Eine Quelle von außen wird im Netz zu einer Transition ohne Eingang, die den Zustand schreibt. Die Domänenansicht markiert die Entität, und die Konfliktanalyse meldet einen Befund: Diese Entität wird auch von außen geschaltet, Wechselwirkungen damit sind nicht geprüft. Das deckt Node-RED und AppDaemon ab, weil beide über die API schalten.
+2. **Kennzeichnen.** Der Nutzer kann Entitäten über ein Label als von außen gesteuert markieren. Das ergänzt die Beobachtung, wo sie nichts gesehen hat, und korrigiert sie, wo sie irrt.
+3. **Einlesen** (optional, nicht terminiert). Die Home-Assistant-Knoten eines Node-RED-Flows lassen sich statisch in das Netz übersetzen: Auslöser-Knoten, Aktions-Knoten und die Verdrahtung dazwischen. Funktionsknoten mit eigenem Code bleiben undurchsichtig und werden als solche ausgewiesen. Für AppDaemon und Pyscript ist das nicht geplant, weil dort beliebiger Code läuft.
+
+Grenzen der Beobachtung:
+
+- Sie zeigt nur, was im betrachteten Zeitraum tatsächlich geschaltet wurde, nicht was geschaltet werden könnte.
+- Sie kennt die Wirkung, nicht den Auslöser und nicht die Bedingung. Ein Konflikt lässt sich damit vermuten, nicht belegen.
+- Add-ons, die über den Supervisor zugreifen, teilen sich einen Systembenutzer. Node-RED und AppDaemon sind dann nicht voneinander zu unterscheiden, wohl aber von Automationen und Menschen.
+- Pyscript läuft im Prozess von Home Assistant selbst. Ob seine Schreibzugriffe erkennbar sind, ist nicht geprüft.
+
 ## 5. Schnittstellen zu Home Assistant
 
 **Verifiziert am 18.11.2026** gegen den Quellcode von Home Assistant Core 2026.10.4 (die Version, die `pytest-homeassistant-custom-component` 0.13.375 festschreibt) und gegen den Entwickler-Blog. Das aktuelle Release 2026.11.2 wurde nicht gesondert geprüft.
@@ -146,7 +167,7 @@ Dashboards haben kein Verhalten. Für sie bleibt die Live-Vorschau die Darstellu
 
 ### Offen für M1
 
-- **Automationen schreiben.** Zwei Wege: (a) Das Backend schreibt `automations.yaml` selbst mit denselben Lese- und Schreibhelfern wie der View und ruft danach `automation.reload` mit der ID auf. Eigenes Lock, Restrisiko bei gleichzeitiger Bearbeitung im HA-Editor. (b) Das Backend ruft den REST-Endpunkt der eigenen Instanz auf und nutzt damit Validierung, Lock und Reload des Views. Vorschlag: (a), weil Schnappschuss und Schreiben dann in einer Hand liegen; den Schnappschuss unmittelbar vor dem Schreiben unter dem eigenen Lock ziehen.
+- **Automationen schreiben.** Zwei Wege: (a) Das Backend schreibt `automations.yaml` selbst mit denselben Lese- und Schreibhelfern wie der View und ruft danach `automation.reload` mit der ID auf. Eigenes Lock, Restrisiko bei gleichzeitiger Bearbeitung im HA-Editor. (b) Das Backend ruft den REST-Endpunkt der eigenen Instanz auf und nutzt damit Validierung, Lock und Reload des Views. **Entschieden (18.11.2026): (a)**, weil Schnappschuss und Schreiben dann in einer Hand liegen; den Schnappschuss unmittelbar vor dem Schreiben unter dem eigenen Lock ziehen.
 - **Strukturierte Ausgabe über AI Task.** Verschachtelung geht nur über den `object`-Selektor mit `fields` und `multiple`. Frei geformte Teile wie die Automation-Konfiguration in `after` lassen sich nur als untypisiertes Objekt beschreiben. Ob Modelle damit zuverlässig Change Sets liefern, ist in M1 als Erstes zu testen. Rückfall bleibt der eigene OpenAI-kompatible Client mit echtem JSON-Schema.
 
 Bekannte Einschränkung: Automationen und Dashboards im YAML-Modus (Pakete, `!include`) können nicht über die UI-Schnittstellen geschrieben werden. Sie werden gelesen, in das Netz überführt und in Konfliktanalyse und Domänenansicht berücksichtigt.
@@ -221,6 +242,7 @@ Abnahme: „Schalte das Flurlicht bei Bewegung nach Sonnenuntergang für 3 Minut
 - Übersetzung für UI- und YAML-basierte Automationen, Zusammenführung zum Gesamtnetz
 - Herkunftsverweise an allen Netzelementen
 - Export des Netzes (PNML oder JSON) für die Kontrolle in externen Werkzeugen
+- Transitionen ohne Eingang für Schreibzugriffe von außen im Netz vorsehen (Abschnitt 4, „Externe Automationsquellen“)
 
 Abnahme: Die Automationen der Dev-Instanz und eines anonymisierten Abzugs einer echten Instanz werden ohne Fehler übersetzt. Nicht abbildbare Konstrukte werden als Annotation ausgewiesen.
 
@@ -232,6 +254,7 @@ Abnahme: Die Automationen der Dev-Instanz und eines anonymisierten Abzugs einer 
 ### M4 Konfliktanalyse
 - Prüfungen der Stufe C auf dem Gesamtnetz
 - Markierung der Befunde in der Domänenansicht
+- Schreibzugriffe von außen beobachten und kennzeichnen, als Befund melden und in der Domänenansicht markieren
 
 ### M5 Bearbeiten und Erklären
 - Bestehende Automationen ändern
@@ -295,6 +318,7 @@ Diese Punkte sind bei der Durchsicht am 18.11.2026 aufgefallen. Wo nichts andere
 
 - **HA-interne Schnittstellen ändern sich.** Zugriffe kapseln, Mindestversion in `manifest.json` und `hacs.json` festhalten.
 - **Abbildung auf Netze ist unvollständig.** Vereinfachungen dokumentieren, Befunde der Stufe C als Warnung und nicht als Fehler einstufen, solange die Abbildung nicht belastbar ist.
+- **Automationen außerhalb von Home Assistant.** Node-RED, AppDaemon und Pyscript schalten Entitäten, ohne im Netz aufzutauchen. Die Lücke wird sichtbar gemacht, statt Vollständigkeit vorzutäuschen (Abschnitt 4, „Externe Automationsquellen“).
 - **Domänenansicht skaliert nicht.** Große Installationen früh testen, Ausschnitt nach Bereich und Filter anbieten.
 - **Kontextgröße bei großen Installationen.** Ausschnittwahl früh testen, Obergrenzen einbauen.
 - **Schreibrechte.** Panel und Kommandos nur für Administratoren. Kein Schreiben ohne Bestätigung, auch nicht über Dienste.

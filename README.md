@@ -52,3 +52,7 @@ cd frontend
 npm ci
 npm run build
 ```
+
+## License
+
+[MIT](LICENSE)

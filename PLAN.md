@@ -195,7 +195,7 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 | Name und Domain | vor M1 festlegen |
 | Modell für die Entwicklung | Claude bis M4, Ollama als Härtetest in M5 |
 | Modellanbindung | AI Task, falls strukturierte Ausgabe dort ausreicht, sonst eigener Client |
-| Lizenz | MIT oder Apache-2.0 |
+| Lizenz | **Entschieden (18.11.2026): MIT.** |
 | Sprache | Oberfläche Deutsch und Englisch, Code und Doku Englisch |
 | Skripte und Helfer | ab M2 als weitere Operationstypen |
 | YAML-basierte Konfiguration schreiben | nicht geplant, nur lesen |
@@ -261,7 +261,6 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 ### Bekannte Punkte
 
 - **HACS:** Ungeprüft, solange das Repo privat ist (siehe Abnahme). Sobald es öffentlich ist, läuft der Job von selbst. Außerdem sind die Prüfungen `description` und `topics` im Workflow ausgenommen, weil beides in den GitHub-Einstellungen des Repos fehlt. Vor dem HACS-Release setzen und die Ausnahme entfernen.
-- **Lizenz:** Es gibt noch keine `LICENSE`-Datei (Abschnitt 9).
 - **Icon:** `brand/icon.png` ist ein Platzhalter.
 - **Cache des Bundles:** Es wird mit `?v=<Version>` und langen Cache-Headern ausgeliefert. Wer am Panel entwickelt, ohne die Version zu erhöhen, bekommt im Browser das alte Bundle. In M1 auf einen Inhalts-Hash umstellen.
 - **`libturbojpeg`:** Die Dev-Instanz protokolliert beim Start einen Fehler mit Traceback, weil die Systembibliothek fehlt. Betroffen sind nur Kamera-Schnappschüsse der Demo. Im Devcontainer ließe sich `libturbojpeg0` nachinstallieren.
@@ -270,7 +269,7 @@ Der Eval-Satz entsteht ab M1 und wächst mit jedem Meilenstein.
 
 ### Nächste Schritte (M1)
 
-1. Name, Domain und Lizenz festlegen (laut Abschnitt 9 vor M1).
+1. Name und Domain festlegen (laut Abschnitt 9 vor M1). Die Lizenz ist entschieden: MIT.
 2. Strukturierte Ausgabe über AI Task mit dem Selektor-Schema erproben und danach zwischen AI Task und eigenem Client entscheiden.
 3. `context.py`: Hausmodell aus den Registern und den bestehenden Automationen, Ausschnittwahl mit Obergrenze.
 4. `drafting.py`: Modellaufruf, Ergebnis als Change Set.

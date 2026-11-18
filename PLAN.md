@@ -265,7 +265,7 @@ Abnahme: Die Automationen der Dev-Instanz und eines anonymisierten Abzugs einer 
 | Modell für die Entwicklung | Claude bis M6, Ollama als Härtetest in M7 |
 | Modellanbindung | AI Task, falls strukturierte Ausgabe dort ausreicht, sonst eigener Client |
 | Abstraktionsgrad des Netzes | in M2 festlegen, zunächst einfache Stellen-Transitions-Netze mit Annotationen |
-| Darstellung der Domänenansicht | SVG mit Lit, Layout über `elkjs`. Im Schaukasten erproben |
+| Darstellung der Domänenansicht | SVG mit Lit. **Entschieden (18.11.2026) für den Schaukasten:** eigenes einfaches Layout ohne Bibliothek. `elkjs` wird erst in M3 mit echten Daten geprüft. |
 | Netzformat für den Export | JSON intern, PNML als Export |
 | Lizenz | **Entschieden (18.11.2026): MIT.** |
 | Sprache | Oberfläche Deutsch und Englisch, Code und Doku Englisch |
@@ -273,19 +273,19 @@ Abnahme: Die Automationen der Dev-Instanz und eines anonymisierten Abzugs einer 
 
 ### Offene Punkte aus der Durchsicht von Fassung 2
 
-Diese Punkte sind bei der Durchsicht am 18.11.2026 aufgefallen. Die Vorschläge sind noch nicht entschieden.
+Diese Punkte sind bei der Durchsicht am 18.11.2026 aufgefallen. Wo nichts anderes steht, sind die Vorschläge noch nicht entschieden. Für die drei Punkte, von denen der Schaukasten abhängt, gilt die schlanke Variante.
 
 | Punkt | Worum es geht | Vorschlag |
 |---|---|---|
-| Netzformat vor M2 | Die Beispieldaten aus M0 sollen schon die Form des Netzes haben und später als Fixtures dienen. Die Abbildung wird aber erst in M2 festgelegt. | In M0 ein vorläufiges JSON-Format mit Versionsfeld festlegen (Stellen, Transitionen, Kanten, Annotationen, Herkunft, stabile IDs). Damit rechnen, dass die Fixtures in M2 neu erzeugt werden. |
-| Stelle je Entität oder je Zustand | „Zustand einer Entität -> Stelle“ lässt offen, ob eine Entität eine Stelle bekommt oder jeder ihrer Zustände. Numerische Zustände lassen sich nicht aufzählen. Davon hängt ab, was Stufe C zeigen kann, und schon die Beispieldaten müssen sich festlegen. | Für M0 eine Stelle je diskretem Zustand (`on`, `off`), numerische Zustände als Wächter-Annotation. In M2 überprüfen. |
+| Netzformat vor M2 | Die Beispieldaten aus M0 sollen schon die Form des Netzes haben und später als Fixtures dienen. Die Abbildung wird aber erst in M2 festgelegt. | **Entschieden (18.11.2026):** In M0 ein vorläufiges JSON-Format mit Versionsfeld (Stellen, Transitionen, Kanten, Annotationen, Herkunft, stabile IDs), so klein wie möglich. Die Fixtures werden in M2 voraussichtlich neu erzeugt. |
+| Stelle je Entität oder je Zustand | „Zustand einer Entität -> Stelle“ lässt offen, ob eine Entität eine Stelle bekommt oder jeder ihrer Zustände. Numerische Zustände lassen sich nicht aufzählen. Davon hängt ab, was Stufe C zeigen kann, und schon die Beispieldaten müssen sich festlegen. | **Entschieden (18.11.2026) für M0:** eine Stelle je diskretem Zustand (`on`, `off`), und nur für Zustände, die in einer Automation vorkommen. Alles andere als Wächter-Annotation. In M2 überprüfen. |
 | Netzklasse | Abschnitt 4 spricht von Workflow-Netzen, die Tabelle oben von Stellen-Transitions-Netzen. Das über Entitäten verbundene Gesamtnetz hat keine einzelne Quelle und Senke und ist damit kein Workflow-Netz. | Je Ebene benennen: Ablauf einer einzelnen Automation, Gesamtnetz über die Zustandsstellen. |
 | Lücken der Abbildung | Die Tabelle in Abschnitt 4 deckt drei Dinge nicht ab: Umwege über Skripte und Szenen, Ziele über Bereich, Label oder Gerät, die erst zur Laufzeit aufgelöst werden, und abgeleitete Zustände (Gruppen, Template-Entitäten). Auslöseketten, die darüber laufen, bleiben sonst unsichtbar. Die Flur-Entitäten der Dev-Instanz sind selbst Template-Entitäten. | In M2 als eigene Fälle in die Abbildung und in die Übersetzungstests aufnehmen. |
 | Leitprinzip 4 | „Prüfung und Darstellung arbeiten auf demselben Netz“ gilt für Stufe C und die Domänenansicht. Stufe A und B arbeiten laut Abschnitt 6 auf der Konfiguration, und in M1 gibt es noch kein Netz. | Formulierung an Abschnitt 1 angleichen: Konfliktanalyse und Domänenansicht. |
 | Ablage der Beispieldaten | Sie liegen laut Plan in `frontend/src/demo`, sollen aber auch Python-Tests dienen. | Als JSON-Dateien an einer Stelle ablegen, die Frontend und `pytest` beide lesen. Schon in M0 ein Test, der den Beispielvorschlag durch `ChangeSet.from_dict` schickt. |
 | Schweregrad im Beispiel | Der Beispielvorschlag soll trotz Konfliktbefund bis zum Übernehmen durchklickbar sein. Ein Befund der Stufe `error` sperrt das Übernehmen. | Den Konfliktbefund im Beispiel als `warning` führen. Das passt zu Abschnitt 11. |
 | Demo-Kennzeichnung | Zwischen M1 und M3 zeigen zwei Ansichten echte Daten und zwei Beispieldaten. | Kennzeichnung je Ansicht statt einmal für das Panel. |
-| Größe von `elkjs` | `elkjs` 0.12.1 misst 1,65 MB minifiziert und 480 kB gzip-komprimiert. Das heutige Bundle hat 24 kB. Das Bundle ist eingecheckt. | `elkjs` als eigenen, nachgeladenen Teil bauen. Im Schaukasten entscheiden, ob das Bundle eingecheckt bleibt oder erst beim Release gebaut wird. |
+| Größe von `elkjs` | `elkjs` 0.12.1 misst 1,65 MB minifiziert und 480 kB gzip-komprimiert. Das heutige Bundle hat 24 kB. Das Bundle ist eingecheckt. | **Entschieden (18.11.2026):** kein `elkjs` im Schaukasten. Das Bundle bleibt klein, eine Datei und eingecheckt. Erneut prüfen in M3, wenn echte Installationen dargestellt werden. |
 | Abzug einer echten Instanz | Die Abnahme von M2 braucht einen anonymisierten Abzug. Das Repo ist öffentlich. | Abzug nicht ins Repo legen, solange kein Anonymisierungsskript existiert und geprüft ist. Ablageort festlegen. |
 | „In welcher Ansicht entschieden“ | Wer beide Ansichten öffnet, hat nicht in einer entschieden. Ohne Zuteilung wählen Nutzer die Ansicht selbst, was den Vergleich verzerrt. | Festhalten, welche Ansichten geöffnet waren und welche bei der Entscheidung aktiv war. Für einen belastbaren Vergleich die Startansicht zuteilen. |
 | Abnahmekriterien | M0 bis M2 haben eine Abnahme, M3 bis M7 nicht. | Für M3 und M4 ergänzen, weil dort die beiden Unterscheidungsmerkmale liegen. |
@@ -367,12 +367,11 @@ M0 nach Fassung 2 ist nicht abgeschlossen. Das Gerüst steht, der Schaukasten fe
 
 Rest von M0 (Schaukasten):
 
-1. Die Punkte „Netzformat vor M2“, „Stelle je Entität oder je Zustand“ und „Größe von `elkjs`“ aus Abschnitt 10 entscheiden. Sie bestimmen die Form der Beispieldaten und den Bau des Frontends.
-2. `Finding` um `net_refs` erweitern. Gespeicherte Change Sets ohne das Feld müssen lesbar bleiben.
-3. Beispieldaten anlegen: Haus mit drei Räumen und vier Automationen, ein Vorschlag mit Konfliktbefund, das zugehörige Netz.
-4. Panel mit den vier Ansichten bauen, gespeist aus den Beispieldaten, als Demo gekennzeichnet, durchklickbar von der Anfrage bis zum Übernehmen. Kein Modellaufruf, kein Schreiben.
-5. Domänenansicht als SVG mit Lit und `elkjs` erproben.
-6. Bildschirmfotos der vier Ansichten hier nachtragen.
+1. `Finding` um `net_refs` erweitern. Gespeicherte Change Sets ohne das Feld müssen lesbar bleiben.
+2. Beispieldaten anlegen: Haus mit drei Räumen und vier Automationen, ein Vorschlag mit Konfliktbefund, das zugehörige Netz.
+3. Panel mit den vier Ansichten bauen, gespeist aus den Beispieldaten, als Demo gekennzeichnet, durchklickbar von der Anfrage bis zum Übernehmen. Kein Modellaufruf, kein Schreiben.
+4. Domänenansicht als SVG mit Lit und eigenem einfachem Layout bauen.
+5. Bildschirmfotos der vier Ansichten hier nachtragen.
 
 Danach M1:
 

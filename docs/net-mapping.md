@@ -90,7 +90,8 @@ below), each alternative is its own transition and the ids get a suffix: `#0`,
 | `branch` | One alternative of a `choose` or `if`, including the default. | `t:<automation_id>:<path>` of the alternative |
 | `fork`, `join` | Start and end of `parallel`. | `t:<automation_id>:<path>:fork`, `:join` |
 | `loop`, `exit` | Go round a `repeat` once more, or leave it. | `t:<automation_id>:<path>:loop`, `:exit` |
-| `stop` | A `stop` step, or a `condition` step that does not hold. | `t:<automation_id>:<path>` for a `stop` step, `t:<automation_id>:<path>:stop` for the failing side of a `condition` step |
+| `check` | Conditions hold and the run goes on: the automation's conditions, or a `condition` step. | `t:<automation_id>:conditions`, or `t:<automation_id>:<path>` |
+| `stop` | A `stop` step, or conditions that do not hold. | `t:<automation_id>:<path>` for a `stop` step; `t:<automation_id>:conditions:stop` and `t:<automation_id>:<path>:stop` for the failing side of a check |
 | `skip` | A step with no effect the net can express (set a variable, fire nothing). | same |
 | `environment` | Something outside the automations changes a state. | `t:env:<entity_id>:<state>` |
 
@@ -126,6 +127,9 @@ control places, never several arcs on one transition:
 - `wait_for_trigger` with several triggers: one `wait` transition per trigger,
   and per combination within each.
 
+Combinations are numbered entity first: all states of the first entity, then
+the next entity.
+
 Conditions are the opposite case. A condition that names several entities
 requires all of them, so it is several read arcs on the same transition.
 
@@ -139,7 +143,7 @@ requires all of them, so it is several read arcs on the same transition.
 | `state` without `to`, or on an `attribute` | One transition per entity, read arc from `p:<entity>:*`. `attribute`, `from` and `to` become annotations. |
 | `numeric_state` | One transition per entity, read arc from `p:<entity>:*`, annotation `guard` with the bounds. |
 | `sun` | Read arc from `p:sun.sun:*`, annotation `event` (`sunset`, offset). |
-| `zone` | Read arc from `p:<entity>:*`, annotation `event`. |
+| `zone` | One transition per entity, read arc from `p:<entity>:*`, annotation `event`. |
 | `template` | Annotation `template`. Read arcs from `p:<entity>:*` for each entity the template refers to, when that can be determined. Listed as opaque. |
 | `time`, `time_pattern`, `event`, `homeassistant`, `webhook`, `mqtt`, `calendar`, `tag`, `conversation`, `device` and any other | No input place. Annotation `event` with the platform and its settings. `device` triggers are opaque. |
 
@@ -148,8 +152,18 @@ as annotation `mode`. A disabled trigger yields no transition.
 
 ### Conditions of the automation
 
-They attach to every trigger transition of the automation, because a run only
-starts when they hold.
+They are a check between the triggers and the first action, exactly like a
+`condition` step in that position:
+
+- a `check` transition `t:<id>:conditions` takes the token from `triggered` to
+  `p:<id>:@actions[0]`, the place before the first action, and carries the
+  conditions as described below;
+- a `stop` transition `t:<id>:conditions:stop` takes it to `done` when they do
+  not hold. It carries annotation `otherwise`.
+
+Trigger transitions carry no conditions, so the alternatives of a trigger do
+not multiply them. An automation without conditions has neither transition:
+its first step consumes `triggered` directly.
 
 | Condition | Net |
 |---|---|
@@ -164,7 +178,8 @@ starts when they hold.
 
 Steps are chained by control places. The step at `path` consumes
 `p:<id>:@<path>` and produces the place before the next step, or `done` after
-the last one. `triggered` is the place before the first step.
+the last one. The place before the first step is `triggered`, or
+`p:<id>:@actions[0]` when the automation has conditions.
 
 | Step | Net |
 |---|---|
@@ -172,12 +187,12 @@ the last one. `triggered` is the place before the first step.
 | Action call with an unknown effect on its targets | `action` transition with a `write` arc to `p:<entity>:*` for each target, annotation `action`. |
 | Action call with no entity target (`notify.*`, `persistent_notification.*`, ...) | `action` transition without state arcs, annotation `action`. |
 | `delay` | `wait` transition, annotation `delay`. |
-| `wait_for_trigger` | `wait` transition with the read arcs its triggers would have, annotation `timeout` if set. |
-| `wait_template` | `wait` transition, annotation `template`, read arcs (role `trigger`) from `p:<entity>:*` for the entities the template refers to, when that can be determined. Opaque. |
-| `choose`, `if` | One `branch` transition per alternative, carrying that alternative's conditions like automation conditions, then the alternative's steps, all ending in the place after the whole step. The default, or an implicit empty one, is a `branch` too. |
+| `wait_for_trigger` | `wait` transition with the read arcs its triggers would have, annotation `timeout` if set. Without any trigger it is one `wait` transition without read arcs. |
+| `wait_template` | `wait` transition, annotation `template`, read arcs (role `condition`) from `p:<entity>:*` for the entities the template refers to, when that can be determined: the wait ends when the template holds, which is a level, not a change. Opaque. |
+| `choose`, `if` | One `branch` transition per alternative, carrying that alternative's conditions as read arcs and guards, then the alternative's steps, all ending in the place after the whole step. The default, or an implicit empty one, is a `branch` too. |
 | `parallel` | A `fork` producing the first place of every branch, the branches, and a `join` consuming their last places. |
 | `repeat` | See "Loops" below. |
-| `condition` as a step | A pair: a `skip` transition onward carrying the condition, and a `stop` transition to `done` for when it does not hold. |
+| `condition` as a step | A pair: a `check` transition onward carrying the condition, and a `stop` transition to `done` for when it does not hold. |
 | `stop` | `stop` transition to `done`. |
 | `variables`, `event`, `sequence`, `set_conversation_response` | `sequence` is flattened. `event` is a `skip` with annotation `fires_event`. The others are `skip`. |
 | Any other step | `skip`, opaque. |
@@ -197,7 +212,12 @@ the last one. `triggered` is the place before the first step.
 The `while` conditions sit on `loop` and the `until` conditions on `exit`, as
 read arcs and guards like any condition. The other transition of the pair
 carries annotation `otherwise`. A count or `for_each` is an annotation on
-`loop`.
+`loop`, and `exit` carries `otherwise`.
+
+The place before the body's first step follows the general rule:
+`p:<automation_id>:@<path>.repeat.sequence[0]`. An empty body makes `loop`
+return straight to the head. If the body always stops, a check-first loop keeps
+`loop` and `exit`; an `until` loop has neither, and the repeat ends the run.
 
 **Effects.** The table in `net/effects.py` says which state a call leads to and
 is the authority. `turn_on` → `on` and `turn_off` → `off` hold only for domains
@@ -275,9 +295,19 @@ nothing else touches.
 15. **Initial marking.** The net says which states exist, not which one holds
     now.
 
-Whenever one of these applies to an automation, its record says so in `opaque`
-and `complete` is false. Findings of the conflict analysis that rest on such an
-automation are warnings, never errors.
+These limits fall into two groups.
+
+- **Carried as annotations:** time, modes, values, and change versus level.
+  The net keeps the information next to the element it belongs to. An
+  automation that only has these is still `complete`.
+- **Recorded as opaque:** logic beyond "and", templates, indirection,
+  blueprints that do not resolve, device triggers and actions, steps the
+  translation does not know, and steps that cannot be reached. Here the net is
+  missing structure. The automation's record lists each case and `complete` is
+  false.
+
+Findings of the conflict analysis that rest on an automation that is not
+`complete` are warnings, never errors.
 
 ## Export
 

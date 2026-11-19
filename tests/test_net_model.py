@@ -92,6 +92,8 @@ def test_json_matches_the_specification() -> None:
     ]
     assert {t["id"]: t["origin"] for t in data["transitions"]} == {
         "t:night:triggers[0]": {"automation_id": "night", "path": "triggers[0]"},
+        "t:night:conditions": {"automation_id": "night", "path": "conditions"},
+        "t:night:conditions:stop": {"automation_id": "night", "path": "conditions"},
         "t:night:actions[0]": {"automation_id": "night", "path": "actions[0]"},
     }
     arcs = {(a["kind"], a["source"], a["target"], a.get("role")) for a in data["arcs"]}

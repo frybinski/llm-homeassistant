@@ -373,6 +373,8 @@ async def test_an_update_replaces_the_automation_it_changes(
     assert record.entity_id == "automation.hallway_on_motion"
     assert transitions_of(net, "hallway_motion") == [
         "t:hallway_motion:triggers[0]",
+        "t:hallway_motion:conditions",
+        "t:hallway_motion:conditions:stop",
         "t:hallway_motion:actions[0]",
     ]
     assert structure_violations(net) == []

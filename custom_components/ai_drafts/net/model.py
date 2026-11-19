@@ -50,6 +50,7 @@ class TransitionKind(StrEnum):
     JOIN = "join"
     LOOP = "loop"
     EXIT = "exit"
+    CHECK = "check"
     STOP = "stop"
     SKIP = "skip"
     ENVIRONMENT = "environment"

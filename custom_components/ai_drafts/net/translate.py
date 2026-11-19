@@ -182,12 +182,15 @@ class _Guard:
 
     reads: list[tuple[str, str | None]] = field(default_factory=list)
     annotations: list[Annotation] = field(default_factory=list)
+    # True when at least one enabled condition went into it.
+    present: bool = False
 
     def read(self, entity_id: str, state: str | None) -> None:
         if (entity_id, state) not in self.reads:
             self.reads.append((entity_id, state))
 
     def extend(self, other: _Guard) -> None:
+        self.present = self.present or other.present
         for read in other.reads:
             self.read(*read)
         self.annotations.extend(other.annotations)
@@ -356,6 +359,7 @@ class _Builder:
         cond = _normalize_condition(raw)
         if cond.get("enabled") is False:
             return
+        guard.present = True
         kind = cond.get("condition")
         value = {"condition": kind, **_settings(cond, _CONDITION_META | {"condition"})}
 
@@ -684,7 +688,7 @@ class _Builder:
         roles = [(e, s, ArcRole.CONDITION) for e, s in guard.reads]
         self.emit(
             path,
-            TransitionKind.SKIP,
+            TransitionKind.CHECK,
             path,
             consume=[place_in],
             produce=[place_out],
@@ -729,7 +733,7 @@ class _Builder:
             path,
             consume=[place_in],
             produce=[place_out],
-            reads=[(e, s, ArcRole.TRIGGER) for e, s in guard.reads],
+            reads=[(e, s, ArcRole.CONDITION) for e, s in guard.reads],
             annotations=annotations,
         )
         return True
@@ -1066,17 +1070,31 @@ def translate_automation(
                 TransitionKind.TRIGGER,
                 path,
                 produce=[triggered],
-                reads=[
-                    *((e, s, ArcRole.TRIGGER) for e, s in trigger.reads),
-                    *((e, s, ArcRole.CONDITION) for e, s in guard.reads),
-                ],
-                annotations=[
-                    Annotation("mode", mode),
-                    *trigger.annotations,
-                    *guard.annotations,
-                ],
+                reads=[(e, s, ArcRole.TRIGGER) for e, s in trigger.reads],
+                annotations=[Annotation("mode", mode), *trigger.annotations],
             )
-    builder.sequence(actions, "actions", triggered, done)
+    first = triggered
+    if guard.present:
+        # The conditions are a check between the triggers and the first action.
+        first = builder.before("actions[0]")
+        builder.emit(
+            "conditions",
+            TransitionKind.CHECK,
+            "conditions",
+            consume=[triggered],
+            produce=[first],
+            reads=[(e, s, ArcRole.CONDITION) for e, s in guard.reads],
+            annotations=guard.annotations,
+        )
+        builder.emit(
+            "conditions:stop",
+            TransitionKind.STOP,
+            "conditions",
+            consume=[triggered],
+            produce=[done],
+            annotations=[Annotation("otherwise", True)],
+        )
+    builder.sequence(actions, "actions", first, done)
 
     record = AutomationRecord(
         id=automation_id,

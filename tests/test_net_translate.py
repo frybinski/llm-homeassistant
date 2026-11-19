@@ -248,9 +248,9 @@ def test_demo_five_automations_merge_into_one_net_with_shared_places() -> None:
     }
     assert touching("p:input_boolean.nachtmodus:on") == {
         ("write", "t:nachtmodus_an:actions[0]"),
-        ("read", "t:nachtruhe_flur:triggers[0]"),
+        ("read", "t:nachtruhe_flur:conditions"),
     }
     assert touching("p:sun.sun:below_horizon") == {
-        ("read", "t:kinoabend:triggers[0]"),
-        ("read", "t:flurlicht_bewegung:triggers[0]"),
+        ("read", "t:kinoabend:conditions"),
+        ("read", "t:flurlicht_bewegung:conditions"),
     }

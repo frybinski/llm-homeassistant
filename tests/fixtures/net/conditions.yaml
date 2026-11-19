@@ -2,8 +2,10 @@
 # "Mapping rules / Conditions of the automation"). Written by hand from the
 # document. See triggers.yaml for the format.
 #
-# The conditions of the automation attach to every trigger transition: as read
-# arcs with role `condition` and as `guard` annotations. All cases use one time
+# The conditions of the automation are one `check` transition between
+# `triggered` and the place before the first action (t:x:conditions), with a
+# `stop` to `done` for when they do not hold (t:x:conditions:stop, annotation
+# `otherwise`). Trigger transitions carry no conditions. All cases use one time
 # trigger and the same single `delay` step.
 
 defs:
@@ -13,7 +15,10 @@ defs:
     - delay: "00:00:01"
   tail_transition: &tail_transition
     "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
-  time_event: &time_event {event: {platform: time, at: "07:00:00"}}
+    "t:x:triggers[0]":
+      kind: trigger
+      annotations: [{mode: single}, {event: {platform: time, at: "07:00:00"}}]
+    "t:x:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
 
 cases:
   - id: state
@@ -24,33 +29,45 @@ cases:
         - {condition: state, entity_id: light.a, state: "on"}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:on"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:on"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}, *time_event]}
+        "t:x:conditions":
+          kind: check
+          annotations: []
       arcs:
-        - "read p:light.a:on -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:on -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: state-several-entities
-    rule: "state: a read arc from each p:<entity>:<state>, for every entity"
+    rule: "state: all entities must hold, so a read arc from p:<entity>:<state> for each"
     config:
       triggers: *time_trigger
       conditions:
         - {condition: state, entity_id: [light.a, light.b], state: "off"}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:off", "p:light.b:off"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:off", "p:light.b:off"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}, *time_event]}
+        "t:x:conditions":
+          kind: check
+          annotations: []
       arcs:
-        - "read p:light.a:off -> t:x:triggers[0] [condition]"
-        - "read p:light.b:off -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:off -> t:x:conditions [condition]"
+        - "read p:light.b:off -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: state-several-states
@@ -61,19 +78,20 @@ cases:
         - {condition: state, entity_id: light.a, state: ["on", "unavailable"]}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: state, state: ["on", "unavailable"]}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: state, state: ["on", "unavailable"]}}]
       arcs:
-        - "read p:light.a:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["conditions[0]"]
 
@@ -85,22 +103,47 @@ cases:
         - {condition: state, entity_id: [light.a, light.b], state: "on", match: any}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:*", "p:light.b:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:*", "p:light.b:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: state, state: "on", match: any}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: state, state: "on", match: any}}]
       arcs:
-        - "read p:light.a:* -> t:x:triggers[0] [condition]"
-        - "read p:light.b:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:* -> t:x:conditions [condition]"
+        - "read p:light.b:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["conditions[0]"]
+
+  - id: state-on-an-attribute
+    rule: "state on an attribute reads p:<entity>:* under a guard and is not opaque"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: state, entity_id: climate.c, attribute: hvac_action, state: heating}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:climate.c:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: state, attribute: hvac_action, state: heating}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:climate.c:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
 
   - id: numeric-state
     rule: "numeric_state: read arc from p:<entity>:*, annotation guard"
@@ -110,19 +153,20 @@ cases:
         - {condition: numeric_state, entity_id: sensor.t, above: 5}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:sensor.t:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:sensor.t:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: numeric_state, above: 5}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: numeric_state, above: 5}}]
       arcs:
-        - "read p:sensor.t:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:sensor.t:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: sun
@@ -133,19 +177,20 @@ cases:
         - {condition: sun, after: sunset, after_offset: "-00:30:00"}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:sun.sun:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:sun.sun:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: sun, after: sunset, after_offset: "-00:30:00"}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: sun, after: sunset, after_offset: "-00:30:00"}}]
       arcs:
-        - "read p:sun.sun:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:sun.sun:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: time
@@ -156,18 +201,19 @@ cases:
         - {condition: time, after: "22:00:00", before: "06:00:00", weekday: [mon, tue]}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: time, after: "22:00:00", before: "06:00:00", weekday: [mon, tue]}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: time, after: "22:00:00", before: "06:00:00", weekday: [mon, tue]}}]
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: zone
@@ -178,19 +224,20 @@ cases:
         - {condition: zone, entity_id: person.anna, zone: zone.home}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:person.anna:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:person.anna:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: zone, zone: zone.home}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: zone, zone: zone.home}}]
       arcs:
-        - "read p:person.anna:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:person.anna:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: trigger
@@ -201,15 +248,19 @@ cases:
         - {condition: trigger, id: morning}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations: [{mode: single}, *time_event, {guard: {condition: trigger, id: morning}}]
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: trigger, id: morning}}]
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: template
@@ -221,19 +272,20 @@ cases:
         - {condition: template, value_template: "{{ states('sensor.t') | float > 20 }}"}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:sensor.t:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:sensor.t:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: template, value_template: "{{ states('sensor.t') | float > 20 }}"}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: template, value_template: "{{ states('sensor.t') | float > 20 }}"}}]
       arcs:
-        - "read p:sensor.t:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:sensor.t:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["conditions[0]"]
 
@@ -245,18 +297,19 @@ cases:
         - "{{ now().hour > 5 }}"
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: template, value_template: "{{ now().hour > 5 }}"}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: template, value_template: "{{ now().hour > 5 }}"}}]
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["conditions[0]"]
 
@@ -271,20 +324,21 @@ cases:
             - {condition: numeric_state, entity_id: sensor.t, below: 10}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:sensor.t:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:on", "p:sensor.t:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - {guard: {condition: numeric_state, below: 10}}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: numeric_state, below: 10}}]
       arcs:
-        - "read p:light.a:on -> t:x:triggers[0] [condition]"
-        - "read p:sensor.t:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:on -> t:x:conditions [condition]"
+        - "read p:sensor.t:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: or
@@ -298,24 +352,21 @@ cases:
             - {condition: state, entity_id: light.b, state: "on"}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:*", "p:light.b:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:*", "p:light.b:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - guard:
-                condition: or
-                conditions:
-                  - {condition: state, entity_id: light.a, state: "on"}
-                  - {condition: state, entity_id: light.b, state: "on"}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: or, conditions: [{condition: state, entity_id: light.a, state: "on"}, {condition: state, entity_id: light.b, state: "on"}]}}]
       arcs:
-        - "read p:light.a:* -> t:x:triggers[0] [condition]"
-        - "read p:light.b:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:* -> t:x:conditions [condition]"
+        - "read p:light.b:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["conditions[0]"]
 
@@ -329,51 +380,25 @@ cases:
             - {condition: state, entity_id: input_boolean.guest, state: "on"}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:input_boolean.guest:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:input_boolean.guest:*"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]":
-          kind: trigger
-          annotations:
-            - {mode: single}
-            - *time_event
-            - guard:
-                condition: not
-                conditions:
-                  - {condition: state, entity_id: input_boolean.guest, state: "on"}
+        "t:x:conditions":
+          kind: check
+          annotations: [{guard: {condition: not, conditions: [{condition: state, entity_id: input_boolean.guest, state: "on"}]}}]
       arcs:
-        - "read p:input_boolean.guest:* -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:input_boolean.guest:* -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["conditions[0]"]
 
-  - id: conditions-attach-to-every-trigger
-    rule: "conditions attach to every trigger transition, because a run only starts when they hold"
-    config:
-      triggers:
-        - {trigger: state, entity_id: binary_sensor.m, to: "on"}
-        - {trigger: time, at: "07:00:00"}
-      conditions:
-        - {condition: state, entity_id: light.a, state: "off"}
-      actions: *tail_actions
-    expect:
-      places: ["p:x:triggered", "p:x:done", "p:binary_sensor.m:on", "p:light.a:off"]
-      transitions:
-        <<: *tail_transition
-        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
-        "t:x:triggers[1]": {kind: trigger, annotations: [{mode: single}, *time_event]}
-      arcs:
-        - "read p:binary_sensor.m:on -> t:x:triggers[0] [trigger]"
-        - "read p:light.a:off -> t:x:triggers[0] [condition]"
-        - "read p:light.a:off -> t:x:triggers[1] [condition]"
-        - "produce t:x:triggers[0] -> p:x:triggered"
-        - "produce t:x:triggers[1] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
-        - "produce t:x:actions[0] -> p:x:done"
-
   - id: condition-on-the-triggers-own-entity-stays-distinct
-    rule: "a condition on the trigger's own entity is a second read arc with the other role"
+    rule: "a condition on the trigger's own entity is a read arc on the check, with the other role; the trigger keeps its own"
     config:
       triggers:
         - {trigger: state, entity_id: light.a, to: "on"}
@@ -381,13 +406,85 @@ cases:
         - {condition: state, entity_id: light.a, state: "on"}
       actions: *tail_actions
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:on"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:on"]
       transitions:
-        <<: *tail_transition
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
         "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:conditions": {kind: check}
+        "t:x:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
       arcs:
         - "read p:light.a:on -> t:x:triggers[0] [trigger]"
-        - "read p:light.a:on -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:on -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: conditions-do-not-multiply-with-trigger-alternatives
+    rule: "Conditions are one check, however many alternatives a trigger has; the trigger transitions carry none"
+    config:
+      triggers:
+        - {trigger: state, entity_id: [binary_sensor.m, binary_sensor.n], to: "on"}
+      conditions:
+        - {condition: state, entity_id: light.a, state: "off"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:binary_sensor.m:on", "p:binary_sensor.n:on", "p:light.a:off"]
+      transitions:
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:triggers[0]#0": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:triggers[0]#1": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:conditions": {kind: check}
+        "t:x:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
+      arcs:
+        - "read p:binary_sensor.m:on -> t:x:triggers[0]#0 [trigger]"
+        - "read p:binary_sensor.n:on -> t:x:triggers[0]#1 [trigger]"
+        - "produce t:x:triggers[0]#0 -> p:x:triggered"
+        - "produce t:x:triggers[0]#1 -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.a:off -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: no-conditions-no-check
+    rule: "An automation without conditions has neither check nor stop; the first step consumes triggered"
+    config:
+      triggers: *time_trigger
+      conditions: []
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations: [{mode: single}, {event: {platform: time, at: "07:00:00"}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: disabled-condition-is-no-condition
+    rule: "A disabled condition does not hold anything: no check"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: state, entity_id: light.a, state: "on", enabled: false}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations: [{mode: single}, {event: {platform: time, at: "07:00:00"}}]
+      arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
         - "consume p:x:triggered -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"

@@ -166,7 +166,7 @@ cases:
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: wait-template
-    rule: "wait_template: a wait transition, annotation template, read arcs (role trigger) from the * places of the entities it refers to, opaque"
+    rule: "wait_template: a wait transition, annotation template, read arcs (role condition) from the * places of the entities it refers to, opaque"
     resolver: {}
     config:
       triggers: *time_trigger
@@ -183,7 +183,7 @@ cases:
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
         - "consume p:x:triggered -> t:x:actions[0]"
-        - "read p:light.a:* -> t:x:actions[0] [trigger]"
+        - "read p:light.a:* -> t:x:actions[0] [condition]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["actions[0]"]
 
@@ -555,7 +555,7 @@ cases:
 
   # --- condition, stop and the steps without an effect ----------------------
   - id: condition-step
-    rule: "condition as a step: a skip onward carrying the condition, and a stop to done for when it does not hold"
+    rule: "condition as a step: a check onward carrying the condition, and a stop to done for when it does not hold"
     config:
       triggers: *time_trigger
       actions:
@@ -565,7 +565,7 @@ cases:
       places: ["p:x:triggered", "p:x:@actions[1]", "p:x:done", "p:light.a:on", "p:light.a:off"]
       transitions:
         <<: *time_t
-        "t:x:actions[0]": {kind: skip}
+        "t:x:actions[0]": {kind: check}
         "t:x:actions[0]:stop": {kind: stop}
         "t:x:actions[1]": {kind: action, annotations: [{action: light.turn_off}]}
       arcs:
@@ -927,15 +927,21 @@ cases:
       action:
         - {service: light.turn_off, entity_id: light.a}
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.a:off", "p:light.b:off"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:on", "p:light.a:off", "p:light.b:off"]
       transitions:
         "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:conditions": {kind: check}
+        "t:x:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
         "t:x:actions[0]": {kind: action, annotations: [{action: light.turn_off}]}
       arcs:
         - "read p:light.a:on -> t:x:triggers[0] [trigger]"
-        - "read p:light.b:off -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.b:off -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
         - "write t:x:actions[0] -> p:light.a:off"
 
@@ -949,15 +955,21 @@ cases:
       actions:
         - delay: "00:00:01"
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.b:off"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]", "p:light.a:on", "p:light.b:off"]
       transitions:
         "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:conditions": {kind: check}
+        "t:x:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
         "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
       arcs:
         - "read p:light.a:on -> t:x:triggers[0] [trigger]"
-        - "read p:light.b:off -> t:x:triggers[0] [condition]"
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0]"
+        - "consume p:x:triggered -> t:x:conditions"
+        - "read p:light.b:off -> t:x:conditions [condition]"
+        - "produce t:x:conditions -> p:x:@actions[0]"
+        - "consume p:x:triggered -> t:x:conditions:stop"
+        - "produce t:x:conditions:stop -> p:x:done"
+        - "consume p:x:@actions[0] -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: attribute-trigger-collapses-to-the-any-place
@@ -1030,3 +1042,83 @@ cases:
         - "produce t:x:triggers[0] -> p:x:triggered"
         - "consume p:x:triggered -> t:x:actions"
         - "produce t:x:actions -> p:x:done"
+
+  - id: repeat-empty-body
+    rule: "Loops: an empty body makes loop return straight to the head"
+    config:
+      triggers: *time_trigger
+      actions:
+        - repeat: {count: 2}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]:loop": {kind: loop, annotations: [{repeat: {count: 2}}]}
+        "t:x:actions[0]:exit": {kind: exit, annotations: [{otherwise: true}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]:loop"
+        - "produce t:x:actions[0]:loop -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]:exit"
+        - "produce t:x:actions[0]:exit -> p:x:done"
+
+  - id: repeat-check-first-body-always-stops
+    rule: "Loops: if the body always stops, a check-first loop keeps loop and exit"
+    config:
+      triggers: *time_trigger
+      actions:
+        - repeat:
+            count: 2
+            sequence:
+              - {stop: enough}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0].repeat.sequence[0]"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]:loop": {kind: loop, annotations: [{repeat: {count: 2}}]}
+        "t:x:actions[0]:exit": {kind: exit, annotations: [{otherwise: true}]}
+        "t:x:actions[0].repeat.sequence[0]": {kind: stop, annotations: [{stop: {reason: enough}}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]:loop"
+        - "produce t:x:actions[0]:loop -> p:x:@actions[0].repeat.sequence[0]"
+        - "consume p:x:@actions[0].repeat.sequence[0] -> t:x:actions[0].repeat.sequence[0]"
+        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:done"
+        - "consume p:x:triggered -> t:x:actions[0]:exit"
+        - "produce t:x:actions[0]:exit -> p:x:done"
+
+  - id: repeat-until-body-always-stops
+    rule: "Loops: if the body always stops, an until loop has neither loop nor exit; the repeat ends the run"
+    config:
+      triggers: *time_trigger
+      actions:
+        - repeat:
+            until:
+              - {condition: state, entity_id: light.a, state: "on"}
+            sequence:
+              - {stop: enough}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].repeat.sequence[0]": {kind: stop, annotations: [{stop: {reason: enough}}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].repeat.sequence[0]"
+        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:done"
+
+  - id: wait-for-trigger-without-triggers
+    rule: "wait_for_trigger without any trigger is one wait transition without read arcs"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {wait_for_trigger: [], timeout: "00:01:00"}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: wait, annotations: [{timeout: "00:01:00"}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"

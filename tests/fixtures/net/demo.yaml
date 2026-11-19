@@ -7,17 +7,24 @@ nachtruhe_flur:
   places:
     - "p:nachtruhe_flur:triggered"
     - "p:nachtruhe_flur:done"
+    - "p:nachtruhe_flur:@actions[0]"
     - "p:light.flurlicht:on"
     - "p:light.flurlicht:off"
     - "p:input_boolean.nachtmodus:on"
   transitions:
     "t:nachtruhe_flur:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+    "t:nachtruhe_flur:conditions": {kind: check}
+    "t:nachtruhe_flur:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
     "t:nachtruhe_flur:actions[0]": {kind: action, annotations: [{action: light.turn_off}]}
   arcs:
     - "read p:light.flurlicht:on -> t:nachtruhe_flur:triggers[0] [trigger]"
-    - "read p:input_boolean.nachtmodus:on -> t:nachtruhe_flur:triggers[0] [condition]"
     - "produce t:nachtruhe_flur:triggers[0] -> p:nachtruhe_flur:triggered"
-    - "consume p:nachtruhe_flur:triggered -> t:nachtruhe_flur:actions[0]"
+    - "consume p:nachtruhe_flur:triggered -> t:nachtruhe_flur:conditions"
+    - "read p:input_boolean.nachtmodus:on -> t:nachtruhe_flur:conditions [condition]"
+    - "produce t:nachtruhe_flur:conditions -> p:nachtruhe_flur:@actions[0]"
+    - "consume p:nachtruhe_flur:triggered -> t:nachtruhe_flur:conditions:stop"
+    - "produce t:nachtruhe_flur:conditions:stop -> p:nachtruhe_flur:done"
+    - "consume p:nachtruhe_flur:@actions[0] -> t:nachtruhe_flur:actions[0]"
     - "produce t:nachtruhe_flur:actions[0] -> p:nachtruhe_flur:done"
     - "write t:nachtruhe_flur:actions[0] -> p:light.flurlicht:off"
 
@@ -52,6 +59,7 @@ kinoabend:
   mode: single
   places:
     - "p:kinoabend:triggered"
+    - "p:kinoabend:@actions[0]"
     - "p:kinoabend:@actions[1]"
     - "p:kinoabend:done"
     - "p:media_player.wohnzimmer_tv:playing"
@@ -60,13 +68,19 @@ kinoabend:
     - "p:light.wohnzimmer_stehlampe:on"
   transitions:
     "t:kinoabend:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+    "t:kinoabend:conditions": {kind: check}
+    "t:kinoabend:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
     "t:kinoabend:actions[0]": {kind: action, annotations: [{action: light.turn_off}]}
     "t:kinoabend:actions[1]": {kind: action, annotations: [{action: light.turn_on}]}
   arcs:
     - "read p:media_player.wohnzimmer_tv:playing -> t:kinoabend:triggers[0] [trigger]"
-    - "read p:sun.sun:below_horizon -> t:kinoabend:triggers[0] [condition]"
     - "produce t:kinoabend:triggers[0] -> p:kinoabend:triggered"
-    - "consume p:kinoabend:triggered -> t:kinoabend:actions[0]"
+    - "consume p:kinoabend:triggered -> t:kinoabend:conditions"
+    - "read p:sun.sun:below_horizon -> t:kinoabend:conditions [condition]"
+    - "produce t:kinoabend:conditions -> p:kinoabend:@actions[0]"
+    - "consume p:kinoabend:triggered -> t:kinoabend:conditions:stop"
+    - "produce t:kinoabend:conditions:stop -> p:kinoabend:done"
+    - "consume p:kinoabend:@actions[0] -> t:kinoabend:actions[0]"
     - "produce t:kinoabend:actions[0] -> p:kinoabend:@actions[1]"
     - "write t:kinoabend:actions[0] -> p:light.wohnzimmer_deckenlicht:off"
     - "consume p:kinoabend:@actions[1] -> t:kinoabend:actions[1]"
@@ -78,6 +92,7 @@ flurlicht_bewegung:
   mode: restart
   places:
     - "p:flurlicht_bewegung:triggered"
+    - "p:flurlicht_bewegung:@actions[0]"
     - "p:flurlicht_bewegung:@actions[1]"
     - "p:flurlicht_bewegung:@actions[2]"
     - "p:flurlicht_bewegung:done"
@@ -87,14 +102,20 @@ flurlicht_bewegung:
     - "p:light.flurlicht:off"
   transitions:
     "t:flurlicht_bewegung:triggers[0]": {kind: trigger, annotations: [{mode: restart}]}
+    "t:flurlicht_bewegung:conditions": {kind: check}
+    "t:flurlicht_bewegung:conditions:stop": {kind: stop, annotations: [{otherwise: true}]}
     "t:flurlicht_bewegung:actions[0]": {kind: action, annotations: [{action: light.turn_on}]}
     "t:flurlicht_bewegung:actions[1]": {kind: wait, annotations: [{delay: "00:03:00"}]}
     "t:flurlicht_bewegung:actions[2]": {kind: action, annotations: [{action: light.turn_off}]}
   arcs:
     - "read p:binary_sensor.flur_bewegungsmelder:on -> t:flurlicht_bewegung:triggers[0] [trigger]"
-    - "read p:sun.sun:below_horizon -> t:flurlicht_bewegung:triggers[0] [condition]"
     - "produce t:flurlicht_bewegung:triggers[0] -> p:flurlicht_bewegung:triggered"
-    - "consume p:flurlicht_bewegung:triggered -> t:flurlicht_bewegung:actions[0]"
+    - "consume p:flurlicht_bewegung:triggered -> t:flurlicht_bewegung:conditions"
+    - "read p:sun.sun:below_horizon -> t:flurlicht_bewegung:conditions [condition]"
+    - "produce t:flurlicht_bewegung:conditions -> p:flurlicht_bewegung:@actions[0]"
+    - "consume p:flurlicht_bewegung:triggered -> t:flurlicht_bewegung:conditions:stop"
+    - "produce t:flurlicht_bewegung:conditions:stop -> p:flurlicht_bewegung:done"
+    - "consume p:flurlicht_bewegung:@actions[0] -> t:flurlicht_bewegung:actions[0]"
     - "produce t:flurlicht_bewegung:actions[0] -> p:flurlicht_bewegung:@actions[1]"
     - "write t:flurlicht_bewegung:actions[0] -> p:light.flurlicht:on"
     - "consume p:flurlicht_bewegung:@actions[1] -> t:flurlicht_bewegung:actions[1]"

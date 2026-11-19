@@ -90,7 +90,7 @@ Zustände: `draft -> checked -> applied -> reverted`, daneben `failed` und `disc
 
 Jede Automation wird in ein Workflow-Netz überführt. Die Netze aller Automationen werden über gemeinsame Entitäten verbunden. Auf diesem Gesamtnetz arbeiten Konfliktanalyse und Domänenansicht.
 
-Die genaue Abbildung ist Entwurfsaufgabe in M2. Ausgangspunkt:
+Die Abbildung ist seit M2 in `docs/net-mapping.md` festgelegt (Formatversion 1) und dort maßgeblich. Die folgende Tabelle ist der ursprüngliche Ausgangspunkt:
 
 | HA-Konzept | Netz |
 |---|---|
@@ -303,8 +303,8 @@ Diese Punkte sind bei der Durchsicht am 18.11.2026 aufgefallen. Wo nichts andere
 |---|---|---|
 | Netzformat vor M2 | Die Beispieldaten aus M0 sollen schon die Form des Netzes haben und später als Fixtures dienen. Die Abbildung wird aber erst in M2 festgelegt. | **Entschieden (18.11.2026):** In M0 ein vorläufiges JSON-Format mit Versionsfeld (Stellen, Transitionen, Kanten, Annotationen, Herkunft, stabile IDs), so klein wie möglich. Die Fixtures werden in M2 voraussichtlich neu erzeugt. |
 | Stelle je Entität oder je Zustand | „Zustand einer Entität -> Stelle“ lässt offen, ob eine Entität eine Stelle bekommt oder jeder ihrer Zustände. Numerische Zustände lassen sich nicht aufzählen. Davon hängt ab, was Stufe C zeigen kann, und schon die Beispieldaten müssen sich festlegen. | **Entschieden (18.11.2026) für M0:** eine Stelle je diskretem Zustand (`on`, `off`), und nur für Zustände, die in einer Automation vorkommen. Alles andere als Wächter-Annotation. In M2 überprüfen. |
-| Netzklasse | Abschnitt 4 spricht von Workflow-Netzen, die Tabelle oben von Stellen-Transitions-Netzen. Das über Entitäten verbundene Gesamtnetz hat keine einzelne Quelle und Senke und ist damit kein Workflow-Netz. | Je Ebene benennen: Ablauf einer einzelnen Automation, Gesamtnetz über die Zustandsstellen. |
-| Lücken der Abbildung | Die Tabelle in Abschnitt 4 deckt drei Dinge nicht ab: Umwege über Skripte und Szenen, Ziele über Bereich, Label oder Gerät, die erst zur Laufzeit aufgelöst werden, und abgeleitete Zustände (Gruppen, Template-Entitäten). Auslöseketten, die darüber laufen, bleiben sonst unsichtbar. Die Flur-Entitäten der Dev-Instanz sind selbst Template-Entitäten. | In M2 als eigene Fälle in die Abbildung und in die Übersetzungstests aufnehmen. |
+| Netzklasse | Abschnitt 4 spricht von Workflow-Netzen, die Tabelle oben von Stellen-Transitions-Netzen. Das über Entitäten verbundene Gesamtnetz hat keine einzelne Quelle und Senke und ist damit kein Workflow-Netz. | **Entschieden (19.11.2026):** Der Ablauf einer einzelnen Automation ist ein Workflow-Netz zwischen „ausgelöst“ und „fertig“. Das Gesamtnetz über die Zustandsstellen ist ein Stellen-Transitions-Netz mit Lese- und Schreibkanten. |
+| Lücken der Abbildung | Die Tabelle in Abschnitt 4 deckt drei Dinge nicht ab: Umwege über Skripte und Szenen, Ziele über Bereich, Label oder Gerät, die erst zur Laufzeit aufgelöst werden, und abgeleitete Zustände (Gruppen, Template-Entitäten). Auslöseketten, die darüber laufen, bleiben sonst unsichtbar. Die Flur-Entitäten der Dev-Instanz sind selbst Template-Entitäten. | **Teilweise umgesetzt (19.11.2026):** Ziele über Bereich, Etage, Label und Gerät werden zur Übersetzungszeit aufgelöst. Skripte, Szenen und abgeleitete Zustände werden nicht verfolgt und je Automation ausgewiesen. |
 | Leitprinzip 4 | „Prüfung und Darstellung arbeiten auf demselben Netz“ gilt für Stufe C und die Domänenansicht. Stufe A und B arbeiten laut Abschnitt 6 auf der Konfiguration, und in M1 gibt es noch kein Netz. | Formulierung an Abschnitt 1 angleichen: Konfliktanalyse und Domänenansicht. |
 | Ablage der Beispieldaten | Sie liegen laut Plan in `frontend/src/demo`, sollen aber auch Python-Tests dienen. | **Umgesetzt:** JSON-Dateien in `frontend/src/demo`, die das Frontend beim Bau einbindet und `pytest` direkt liest. Ein Test schickt alle Beispiel-Change-Sets durch `ChangeSet.from_dict`. |
 | Schweregrad im Beispiel | Der Beispielvorschlag soll trotz Konfliktbefund bis zum Übernehmen durchklickbar sein. Ein Befund der Stufe `error` sperrt das Übernehmen. | **Umgesetzt:** Der Konfliktbefund im Beispiel ist eine `warning`. |
@@ -607,3 +607,61 @@ Teil 3 läuft über die Instanz des Auftraggebers, dort gibt es ein echtes Model
 Unabhängig davon:
 
 - Die Meldungen der Befunde für Menschen formulieren und übersetzen.
+
+## 15. Stand M2
+
+M2 ist umgesetzt bis auf die Abnahme mit den Automationen einer echten Instanz. Dafür fehlt ein anonymisierter Abzug.
+
+### Was es gibt
+
+- **Spezifikation** der Abbildung in `docs/net-mapping.md`, Formatversion 1. Sie endet mit einer Liste dessen, was das Netz nicht sagt.
+- **Paket `net/`:**
+  - `model.py`: Stellen, Transitionen, Kanten, der Datensatz je Automation, das Netz, mit Prüfung der Strukturregeln.
+  - `translate.py`: Übersetzung einer Automation, ohne Zugriff auf Home Assistant. Was sie vom Haus braucht, kommt über eine kleine Schnittstelle herein. Dazu der Aufbau des Netzes einer Instanz.
+  - `merge.py`: Zusammenführen über gemeinsame Zustandsstellen.
+  - `export.py`: JSON und PNML.
+  - `effects.py`: die Tabelle, welche Aktion zu welchem Zustand führt.
+  - `templates.py`: liest aus einem Template, auf welche Entitäten es sich bezieht.
+- **WebSocket-Kommandos**, nur für Administratoren: `ai_drafts/net/get` liefert das Netz aller Automationen, `ai_drafts/net/export` dasselbe als JSON oder PNML. Beide nehmen wahlweise ein Change Set, dessen Operationen als Vorschlag eingemischt werden, und wahlweise Umgebungstransitionen.
+- **Netz der Instanz:** alle Automationen, mit und ohne ID, aktiv oder nicht. Automationen aus Blueprints werden aus ihrer aufgelösten Konfiguration übersetzt. Eine Automation, die sich nicht übersetzen lässt, wird zu einem undurchsichtigen Datensatz, der Rest entsteht trotzdem.
+
+Die Oberfläche ist in M2 unverändert. Domänenansicht und Bestand zeigen weiter Beispieldaten in Formatversion 0.
+
+### Festlegungen
+
+Alle stehen ausführlich in `docs/net-mapping.md`. Die wichtigsten:
+
+- **Zwei Ebenen.** Der Ablauf einer Automation ist ein Workflow-Netz, das Gesamtnetz ein Stellen-Transitions-Netz mit Lese- und Schreibkanten.
+- **Schreibkanten.** Eine Aktion setzt den Zustand einer Entität, egal wie er war. Das ist eine Reset-Kante. Die hängende Marke aus dem Schaukasten entfällt damit.
+- **Lesekanten mit Rolle.** Auslöser reagieren auf den Wechsel, Bedingungen auf den Zustand.
+- **Alternativen als eigene Transitionen.** Mehrere Kanten an einer Transition bedeuten „alle“. Ein Auslöser über mehrere Entitäten oder Zielzustände wird deshalb eine Transition je Kombination.
+- **Bedingungen als Prüfung.** Die Bedingungen einer Automation sind eine Prüfung zwischen Auslösern und erster Aktion, gebaut wie ein Bedingungsschritt: eine Transition führt weiter, eine zu „fertig“.
+- **Schleifen.** Mit Zähler, `while` oder `for_each` wird zuerst geprüft, mit `until` zuletzt.
+- **Zwei Sorten von Grenzen.** Zeit, Modi und Werte laufen als Annotation mit. Templates, „oder“, Umwege und Geräte-Auslöser fehlen dem Netz als Struktur; sie stehen im Datensatz der Automation, und die Automation gilt als unvollständig. Befunde, die auf einer unvollständigen Automation beruhen, bleiben Warnungen.
+
+Die erste Fassung der Spezifikation hatte zwei Fehler, die erst die Umsetzung zeigte: Auslöser über mehrere Entitäten waren als „alle“ statt „irgendeine“ abgebildet, und Schleifen mit `while` liefen mindestens einmal. Beide sind korrigiert.
+
+### Geprüft
+
+- **Tests:** 1008, in der lokalen und in einer sauberen Umgebung.
+  - Für jede Regel der Spezifikation gibt es eine von Hand geschriebene Erwartung, nicht aus der Ausgabe der Übersetzung kopiert.
+  - Ein Strukturtest prüft für jeden Fall und für 300 zufällig erzeugte Automationen: Die Strukturregeln gelten, jede Kontrollstelle und jeder Schritt liegt auf einem Weg von „ausgelöst“ nach „fertig“, und „unvollständig“ steht genau dann da, wenn etwas undurchsichtig ist.
+- **Echte Instanz:** neun Automationen verschiedener Bauart, darunter eine aus einem Blueprint, eine mit fehlendem Blueprint, eine deaktivierte, eine fehlerhafte und eine mit Zielen über Etage und Label. Das Netz hatte 66 Stellen, 48 Transitionen und 126 Kanten, bestand alle Strukturprüfungen, und der PNML-Export war wohlgeformt.
+- **Von Hand gelesen:** zwei übersetzte Netze gegen die Spezifikation, darunter eines mit mehreren Entitäten im Auslöser, einer Bedingung und einer `while`-Schleife.
+- **Nicht geprüft:** das PNML in einem externen Werkzeug, große Installationen, und die Automationen einer echten Instanz.
+
+### Bekannte Schwächen
+
+- **Geräte-Auslöser und Geräte-Aktionen sind undurchsichtig.** Der Editor von Home Assistant erzeugt sie häufig. Viele dort gebaute Automationen werden deshalb als unvollständig gelten.
+- **Ziele aus Templates** lassen sich nicht auflösen.
+- **Ereignisse,** die eine Automation feuert und eine andere abwartet, werden nicht verbunden.
+- **Abgeleitete Zustände** von Gruppen und Template-Entitäten werden nicht verfolgt.
+- **Grenzwerte aus Entitäten.** Ein numerischer Auslöser, dessen Schwelle aus einer anderen Entität kommt, liest diese Entität nicht.
+- **PNML.** Der Export hat keine Anfangsmarkierung. Eine Transition, die mehrere Entitäten schreibt, fächert sich beim Export auf das Produkt ihrer Zustandsstellen auf.
+- **Laufzeit.** Das Netz wird im Hauptablauf von Home Assistant aufgebaut. An Hunderten von Automationen ist das nicht gemessen.
+
+### Offen
+
+- **Reset-Kanten.** Für die geplante Strukturanalyse reichen sie. Wer später Erreichbarkeit untersuchen will, steht vor dem Problem, dass sie bei Netzen mit Reset-Kanten im Allgemeinen nicht entscheidbar ist. Die Alternative wäre, Schreibkanten schon intern aufzufächern. Entscheidung des Auftraggebers steht aus.
+- **Abnahme.** Sie verlangt die Automationen einer echten Instanz. Vorschlag: ein Diagnose-Download der Integration, der Namen und Entity-IDs durch Pseudonyme ersetzt, sodass nur die Struktur übrig bleibt.
+- **Danach M3:** Bestand und Domänenansicht auf echten Daten, auf Formatversion 1.

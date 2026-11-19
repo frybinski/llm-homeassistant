@@ -1,9 +1,9 @@
 import { LitElement, type PropertyValues, css, html, nothing } from "lit";
 import type { ApiError } from "../api";
-import { type Strings, statusLabel } from "../localize";
+import type { Strings } from "../localize";
 import type { ChangeSet } from "../model";
 import type { AIDraftsInfo, AIDraftsModels } from "../types";
-import { errorBox, fire, sharedStyles } from "./shared";
+import { errorBox, fire, icon, sharedStyles, statusBadge, statusIcon } from "./shared";
 
 export type InfoState =
   | { status: "loading" }
@@ -70,62 +70,68 @@ export class RequestView extends LitElement {
     const t = this.t;
     const canSend = this._text.trim() !== "" && !this.drafting;
     return html`
-      ${this._renderInfo()}
-      <section class="card">
+      <section class="card compose ${this.drafting ? "busy" : ""}" aria-busy=${this.drafting ? "true" : "false"}>
+        ${this.drafting ? html`<div class="progress" aria-hidden="true"><span></span></div>` : nothing}
         <h2>${t.requestHeading}</h2>
-        <div class="fields">
-          <div class="field request-field">
-            <label for="request">${t.requestLabel}</label>
-            <textarea
-              id="request"
-              rows="3"
-              maxlength="4000"
-              .value=${this._text}
-              ?readonly=${this.drafting}
-              placeholder=${t.requestPlaceholder}
-              @input=${(e: Event) => {
-                this._text = (e.target as HTMLTextAreaElement).value;
-              }}
-            ></textarea>
-          </div>
-          ${this._renderModelField()}
+        <div class="request-field">
+          <label for="request">${t.requestLabel}</label>
+          <textarea
+            id="request"
+            rows="5"
+            maxlength="4000"
+            .value=${this._text}
+            ?readonly=${this.drafting}
+            placeholder=${t.requestPlaceholder}
+            @input=${(e: Event) => {
+              this._text = (e.target as HTMLTextAreaElement).value;
+            }}
+          ></textarea>
         </div>
-        ${this._renderModelNote()}
         <div class="suggestion">
           <button
-            class="secondary"
+            class="secondary small"
             type="button"
             ?disabled=${this.drafting}
             @click=${() => {
               this._text = this.exampleRequest;
             }}
           >
-            ${t.useExample}
+            ${icon("mdi:lightbulb-on-outline")}${t.useExample}
           </button>
           <span class="muted example">“${this.exampleRequest}”</span>
         </div>
-        <div class="actions">
+        <div class="controls">
+          ${this._renderModelField()}
           <button
+            class="send"
             type="button"
             ?disabled=${!canSend}
-            aria-busy=${this.drafting ? "true" : "false"}
             @click=${() =>
               fire(this, "create-draft", {
                 request: this._text.trim(),
                 model: this._modelToSend(),
               })}
           >
-            ${this.drafting ? html`<span class="spinner" aria-hidden="true"></span>` : nothing}
+            ${this.drafting
+              ? html`<span class="spinner" aria-hidden="true"></span>`
+              : icon("mdi:creation-outline")}
             ${this.drafting ? t.drafting : t.createDraft}
           </button>
         </div>
-        ${this.drafting ? html`<p class="muted note" role="status">${t.draftingNote}</p>` : nothing}
+        ${this._renderModelNote()}
+        ${this.drafting
+          ? html`<div class="alert info" role="status">
+              ${icon("mdi:timer-sand")}
+              <div class="alert-body"><p>${t.draftingNote}</p></div>
+            </div>`
+          : nothing}
         ${this.error ? errorBox(t, this.error) : nothing}
       </section>
       <section class="card">
         <h2>${t.historyHeading}</h2>
         ${this._renderHistory()}
       </section>
+      ${this._renderInfo()}
     `;
   }
 
@@ -215,10 +221,13 @@ export class RequestView extends LitElement {
     }
     if (state.status === "error") {
       return html`
-        <div class="error" role="alert">
-          <p>${t.error}</p>
-          <p class="detail">${state.message}</p>
-          <button type="button" @click=${() => fire(this, "retry-info")}>${t.retry}</button>
+        <div class="alert error" role="alert">
+          ${icon("mdi:alert-circle")}
+          <div class="alert-body">
+            <p>${t.error}</p>
+            <p class="detail">${state.message}</p>
+            <button type="button" class="secondary" @click=${() => fire(this, "retry-info")}>${t.retry}</button>
+          </div>
         </div>
       `;
     }
@@ -245,20 +254,29 @@ export class RequestView extends LitElement {
     if (h.status === "loading") return html`<p class="muted">${t.historyLoading}</p>`;
     if (h.status === "error") {
       return html`
-        <div class="error" role="alert">
-          <p>${t.historyError}</p>
-          <p class="detail">${h.message}</p>
-          <button type="button" @click=${() => fire(this, "retry-history")}>${t.retry}</button>
+        <div class="alert error" role="alert">
+          ${icon("mdi:alert-circle")}
+          <div class="alert-body">
+            <p>${t.historyError}</p>
+            <p class="detail">${h.message}</p>
+            <button type="button" class="secondary" @click=${() => fire(this, "retry-history")}>${t.retry}</button>
+          </div>
         </div>
       `;
     }
-    if (h.items.length === 0) return html`<p class="muted">${t.historyEmpty}</p>`;
+    if (h.items.length === 0) {
+      return html`<div class="empty">
+        ${icon("mdi:history")}
+        <p>${t.historyEmpty}</p>
+        <p class="muted">${t.historyEmptyHint}</p>
+      </div>`;
+    }
     const date = new Intl.DateTimeFormat(this.language, {
       dateStyle: "medium",
       timeStyle: "short",
     });
     return html`
-      <p class="muted note">${t.historyOpenHint}</p>
+      <p class="muted note hint">${t.historyOpenHint}</p>
       <ul class="history">
         ${h.items.map((cs) => {
           const firstError = cs.findings.find((f) => f.severity === "error");
@@ -267,25 +285,26 @@ export class RequestView extends LitElement {
             <li>
               <button
                 type="button"
-                class="entry ${current ? "current" : ""}"
+                class="entry ${cs.status} ${current ? "current" : ""}"
                 aria-current=${current ? "true" : "false"}
                 @click=${() => fire(this, "open-changeset", { id: cs.id })}
               >
-                <span class="line">
-                  <span class="badge ${cs.status}">${statusLabel(t, cs.status)}</span>
-                  <span class="when muted">${date.format(new Date(cs.created))}</span>
-                  ${cs.rounds > 0
-                    ? html`<span class="muted">${t.roundsLabel(cs.rounds)}</span>`
+                <span class="lead">${icon(statusIcon(cs.status))}</span>
+                <span class="main">
+                  <span class="text">${cs.request}</span>
+                  <span class="meta muted">
+                    <span>${date.format(new Date(cs.created))}</span>
+                    ${cs.model ? html`<span>${t.historyModel}: ${cs.model}</span>` : nothing}
+                    ${cs.rounds > 0 ? html`<span>${t.roundsLabel(cs.rounds)}</span>` : nothing}
+                  </span>
+                  ${cs.status === "failed" && firstError
+                    ? html`<span class="finding-text">${firstError.message}</span>`
                     : nothing}
-                  ${cs.model
-                    ? html`<span class="muted model">${t.historyModel}: ${cs.model}</span>`
-                    : nothing}
-                  ${current ? html`<span class="muted open">${t.currentBadge}</span>` : nothing}
                 </span>
-                <span class="text">${cs.request}</span>
-                ${cs.status === "failed" && firstError
-                  ? html`<span class="finding-text">${firstError.message}</span>`
-                  : nothing}
+                <span class="side">
+                  ${statusBadge(t, cs.status)}
+                  ${current ? html`<span class="open">${t.currentBadge}</span>` : nothing}
+                </span>
               </button>
             </li>
           `;
@@ -300,34 +319,95 @@ export class RequestView extends LitElement {
       label {
         display: block;
         margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 500;
         color: var(--secondary-text-color);
       }
-      .fields {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px 16px;
-      }
-      .field {
-        min-width: 0;
+      .compose {
+        position: relative;
+        overflow: hidden;
       }
       .request-field {
-        flex: 3 1 280px;
+        min-width: 0;
       }
-      .model-field {
-        flex: 1 1 200px;
-      }
+      textarea,
       select {
         box-sizing: border-box;
         width: 100%;
-        padding: 8px 12px;
         font: inherit;
         color: var(--primary-text-color);
-        background-color: var(--secondary-background-color);
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
+        background-color: var(--input-fill-color, var(--secondary-background-color));
+        border: 1px solid var(--outline-color, var(--divider-color));
+        border-radius: 10px;
       }
-      select:disabled {
-        opacity: 0.6;
+      textarea {
+        min-height: 128px;
+        padding: 14px 16px;
+        font-size: 16px;
+        line-height: 1.5;
+        resize: vertical;
+      }
+      textarea::placeholder {
+        color: var(--secondary-text-color);
+        opacity: 0.8;
+      }
+      textarea:focus {
+        border-color: var(--primary-color);
+      }
+      select {
+        min-height: 40px;
+        padding: 0 12px;
+      }
+      select:disabled,
+      textarea[readonly] {
+        opacity: 0.65;
+      }
+      .suggestion {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        margin: 12px 0 0;
+      }
+      button.small {
+        min-height: 32px;
+        padding: 0 14px;
+        font-size: 13px;
+      }
+      .example {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px 16px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--divider-color);
+      }
+      .model-field {
+        flex: 0 1 300px;
+        min-width: 0;
+      }
+      .model-field label {
+        font-weight: 400;
+        font-size: 12px;
+      }
+      button.send {
+        min-width: 180px;
+        min-height: 44px;
+        font-size: 15px;
+      }
+      @media (max-width: 480px) {
+        .model-field {
+          flex-basis: 100%;
+        }
+        button.send {
+          width: 100%;
+        }
       }
       .unavailable {
         padding-inline-start: 8px;
@@ -337,48 +417,29 @@ export class RequestView extends LitElement {
       .loading-models {
         margin: 0;
       }
-      textarea {
-        box-sizing: border-box;
-        width: 100%;
-        padding: 8px 12px;
-        font: inherit;
-        color: var(--primary-text-color);
-        background-color: var(--secondary-background-color);
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
-        resize: vertical;
-      }
-      .suggestion {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px 12px;
-        margin: 8px 0 12px;
-      }
-      .example {
-        font-size: 14px;
-      }
       .note {
-        margin: 12px 0 0;
-        font-size: 13px;
+        margin: 8px 0 0;
+        font-size: 12px;
       }
       .info {
         display: flex;
         flex-wrap: wrap;
         gap: 2px 16px;
-        margin: 0 0 16px;
-        font-size: 13px;
+        margin: 0;
+        padding: 0 4px;
+        font-size: 12px;
       }
-      .detail {
-        color: var(--secondary-text-color);
+      .alert {
+        margin-top: 16px;
+      }
+      .alert button {
+        min-height: 32px;
       }
       .spinner {
         display: inline-block;
         box-sizing: border-box;
-        width: 14px;
-        height: 14px;
-        margin-right: 8px;
-        vertical-align: -2px;
+        width: 16px;
+        height: 16px;
         border: 2px solid currentColor;
         border-right-color: transparent;
         border-radius: 50%;
@@ -389,13 +450,59 @@ export class RequestView extends LitElement {
           transform: rotate(360deg);
         }
       }
-      @media (prefers-reduced-motion: reduce) {
-        .spinner {
-          animation-duration: 3s;
+      .progress {
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 3px;
+        background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+      }
+      .progress span {
+        display: block;
+        width: 35%;
+        height: 100%;
+        background-color: var(--primary-color);
+        animation: slide 1.6s ease-in-out infinite;
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(300%);
         }
       }
+      @media (prefers-reduced-motion: reduce) {
+        .spinner {
+          animation: none;
+          border-right-color: currentColor;
+          border-style: dotted;
+        }
+        .progress span {
+          width: 100%;
+          animation: none;
+          opacity: 0.6;
+        }
+      }
+      .empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 12px 12px;
+        text-align: center;
+      }
+      .empty ha-icon {
+        --mdc-icon-size: 40px;
+        margin-bottom: 8px;
+        color: var(--secondary-text-color);
+      }
+      .empty p {
+        margin: 0 0 4px;
+      }
+      .hint {
+        margin: -4px 0 12px;
+      }
       .history {
-        margin: 12px 0 0;
+        margin: 0;
         padding: 0;
         list-style: none;
       }
@@ -403,39 +510,103 @@ export class RequestView extends LitElement {
         margin-top: 8px;
       }
       button.entry {
-        display: block;
-        box-sizing: border-box;
+        --status-color: var(--secondary-text-color);
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 12px;
         width: 100%;
-        padding: 10px 12px;
+        padding: 12px 14px;
+        font-weight: 400;
         text-align: start;
         color: var(--primary-text-color);
         background-color: transparent;
         border: 1px solid var(--divider-color);
+        border-radius: 10px;
       }
-      button.entry:hover {
+      button.entry:hover:not(:disabled) {
+        filter: none;
         background-color: var(--secondary-background-color);
       }
       button.entry.current {
+        background-color: color-mix(in srgb, var(--primary-color) 8%, transparent);
         border-color: var(--primary-color);
+        border-inline-start-width: 4px;
+        padding-inline-start: 11px;
       }
-      .line {
+      button.entry.checked {
+        --status-color: var(--primary-color);
+      }
+      button.entry.applied {
+        --status-color: var(--success-color, var(--primary-color));
+      }
+      button.entry.failed {
+        --status-color: var(--error-color);
+      }
+      button.entry.draft {
+        --status-color: var(--warning-color);
+      }
+      .lead {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 36px;
+        height: 36px;
+        color: var(--status-color);
+        background-color: color-mix(in srgb, var(--status-color) 14%, transparent);
+        border-radius: 50%;
+      }
+      .main {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px 12px;
-        margin-bottom: 4px;
-        font-size: 13px;
-      }
-      .open {
-        margin-left: auto;
+        flex: 1;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
       }
       .text {
-        display: block;
+        display: -webkit-box;
+        overflow: hidden;
+        font-size: 15px;
+        line-height: 1.35;
         overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 14px;
+        font-size: 12px;
+      }
+      .side {
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+      .open {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+      }
+      @media (max-width: 480px) {
+        button.entry {
+          flex-wrap: wrap;
+        }
+        .main {
+          flex-basis: calc(100% - 60px);
+        }
+        .side {
+          flex-direction: row-reverse;
+          align-items: center;
+          margin-inline-start: 48px;
+        }
       }
       .finding-text {
         display: block;
-        margin-top: 4px;
+        margin-top: 2px;
         font-size: 13px;
         color: var(--error-color);
         overflow-wrap: anywhere;

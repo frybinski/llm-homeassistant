@@ -360,22 +360,6 @@ export class DomainView extends LitElement {
         gap: 8px 12px;
         margin-bottom: 12px;
       }
-      .segmented {
-        display: inline-flex;
-        border: 1px solid var(--primary-color);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      .segmented button {
-        border: none;
-        border-radius: 0;
-        color: var(--primary-color);
-        background: transparent;
-      }
-      .segmented button.on {
-        color: var(--text-primary-color);
-        background-color: var(--primary-color);
-      }
       .chip {
         display: inline-flex;
         flex-wrap: wrap;

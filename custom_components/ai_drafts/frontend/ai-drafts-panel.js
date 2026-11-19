@@ -521,27 +521,27 @@ function V(e) {
 	}
 	return new De("unknown", String(e));
 }
-async function H(e, t) {
+async function Oe(e, t) {
 	try {
 		return await e.callWS(t);
 	} catch (e) {
 		throw V(e);
 	}
 }
-var Oe = (e) => H(e, { type: "ai_drafts/changesets/list" }), ke = (e) => H(e, { type: "ai_drafts/models" }), Ae = (e, t, n) => H(e, {
+var ke = (e) => Oe(e, { type: "ai_drafts/changesets/list" }), Ae = (e) => Oe(e, { type: "ai_drafts/models" }), je = (e, t, n) => Oe(e, {
 	type: "ai_drafts/draft",
 	request: t,
 	...n === void 0 ? {} : { model: n }
 });
-function je(e, t, n, r) {
+function Me(e, t, n, r) {
 	let i = {
 		type: `ai_drafts/changesets/${t}`,
 		change_set_id: n
 	};
-	return t !== "revert" && (i.decided_in = r.decidedIn, i.views_opened = r.viewsOpened), H(e, i);
+	return t !== "revert" && (i.decided_in = r.decidedIn, i.views_opened = r.viewsOpened), Oe(e, i);
 }
 // src/demo/automations.json
-var Me = [
+var Ne = [
 	{
 		id: "nachtmodus_an",
 		alias: "Nachtmodus um 23 Uhr",
@@ -619,7 +619,7 @@ var Me = [
 			target: { entity_id: "light.wohnzimmer_stehlampe" }
 		}]
 	}
-], Ne = [
+], Pe = [
 	{
 		id: "cs_demo_flurlicht",
 		request: "Schalte das Flurlicht bei Bewegung nach Sonnenuntergang für 3 Minuten ein",
@@ -804,7 +804,7 @@ var Me = [
 		created: "2026-11-16T07:12:44+00:00",
 		decided: null
 	}
-], Pe = {
+], Fe = {
 	areas: [
 		{
 			id: "flur",
@@ -887,7 +887,7 @@ var Me = [
 			area_id: null
 		}
 	]
-}, Fe = {
+}, Ie = {
 	format: "ai_drafts.net",
 	version: 0,
 	places: [
@@ -1346,7 +1346,7 @@ var Me = [
 			kind: "produce"
 		}
 	]
-}, Ie = {
+}, Le = {
 	format: "ai_drafts.net",
 	version: 0,
 	places: [
@@ -1470,7 +1470,7 @@ var Me = [
 			kind: "produce"
 		}
 	]
-}, Le = Pe, Re = Me, ze = Fe, Be = Ie, Ve = Ne[0], He = {
+}, Re = Fe, ze = Ne, Be = Ie, Ve = Le, He = Pe[0], Ue = {
 	title: "AI Drafts",
 	version: "Version",
 	modelSource: "Model source",
@@ -1499,6 +1499,7 @@ var Me = [
 	draftingNote: "The model is working. With a real model this can take up to a minute. Please keep this page open.",
 	historyHeading: "History",
 	historyEmpty: "No proposals yet.",
+	historyEmptyHint: "Describe an automation above. The draft shows up here once it is created.",
 	historyLoading: "Loading history…",
 	historyError: "The history could not be loaded.",
 	historyOpenHint: "Click an entry to open it in the proposal view.",
@@ -1554,6 +1555,9 @@ var Me = [
 	yamlNote: "Every line is an addition: this proposal creates a new automation and changes nothing that exists.",
 	findingsHeading: "Findings",
 	noFindings: "No findings.",
+	noFindingsDetail: "The checks found nothing to report.",
+	copyYaml: "Copy",
+	copiedYaml: "Copied",
 	severityError: "Error",
 	severityWarning: "Warning",
 	severityInfo: "Note",
@@ -1659,7 +1663,7 @@ var Me = [
 	unitHour: ["hour", "hours"],
 	unitMinute: ["minute", "minutes"],
 	unitSecond: ["second", "seconds"]
-}, Ue = {
+}, We = {
 	title: "AI Drafts",
 	version: "Version",
 	modelSource: "Modellquelle",
@@ -1688,6 +1692,7 @@ var Me = [
 	draftingNote: "Das Modell arbeitet. Mit einem echten Modell kann das bis zu eine Minute dauern. Bitte lass diese Seite offen.",
 	historyHeading: "Verlauf",
 	historyEmpty: "Noch keine Vorschläge.",
+	historyEmptyHint: "Beschreibe oben eine Automation. Der Entwurf erscheint hier, sobald er erstellt ist.",
 	historyLoading: "Verlauf lädt…",
 	historyError: "Der Verlauf konnte nicht geladen werden.",
 	historyOpenHint: "Ein Klick auf einen Eintrag öffnet ihn in der Ansicht „Vorschlag und Befunde“.",
@@ -1743,6 +1748,9 @@ var Me = [
 	yamlNote: "Jede Zeile ist eine Ergänzung: Dieser Vorschlag legt eine neue Automation an und ändert nichts Bestehendes.",
 	findingsHeading: "Befunde",
 	noFindings: "Keine Befunde.",
+	noFindingsDetail: "Die Prüfungen haben nichts beanstandet.",
+	copyYaml: "Kopieren",
+	copiedYaml: "Kopiert",
 	severityError: "Fehler",
 	severityWarning: "Warnung",
 	severityInfo: "Hinweis",
@@ -1849,10 +1857,10 @@ var Me = [
 	unitMinute: ["Minute", "Minuten"],
 	unitSecond: ["Sekunde", "Sekunden"]
 };
-function We(e) {
-	return e?.toLowerCase().startsWith("de") ? Ue : He;
+function Ge(e) {
+	return e?.toLowerCase().startsWith("de") ? We : Ue;
 }
-function Ge(e, t) {
+function Ke(e, t) {
 	return {
 		draft: e.statusDraft,
 		checked: e.statusChecked,
@@ -1862,7 +1870,7 @@ function Ge(e, t) {
 		discarded: e.statusDiscarded
 	}[t] ?? t;
 }
-function Ke(e, t) {
+function qe(e, t) {
 	let n = e?.toLowerCase().startsWith("de");
 	return {
 		on: ["on", "an"],
@@ -1873,7 +1881,7 @@ function Ke(e, t) {
 	}[t]?.[+!!n] ?? t;
 }
 // src/logic/describe.ts
-function qe(e, t) {
+function Je(e, t) {
 	let n = (e) => t.areas.find((t) => t.id === e)?.name ?? null, r = e.triggers.map((e) => ({
 		text: e.label,
 		room: n(e.areaId)
@@ -1893,7 +1901,7 @@ function qe(e, t) {
 	};
 }
 // src/logic/net.ts
-function Je(...e) {
+function Ye(...e) {
 	return {
 		format: e[0].format,
 		version: e[0].version,
@@ -1902,10 +1910,10 @@ function Je(...e) {
 		arcs: e.flatMap((e) => e.arcs)
 	};
 }
-function Ye(e, t) {
+function Xe(e, t) {
 	return e.annotations.find((e) => e.type === t)?.value ?? null;
 }
-function Xe(e) {
+function Ze(e) {
 	let t = new Map(e.places.map((e) => [e.id, e])), n = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Map();
 	for (let t of e.arcs) {
 		let e = t.kind === "produce" ? t.source : t.target, n = r.get(e) ?? [];
@@ -1926,7 +1934,7 @@ function Xe(e) {
 		}, n.set(e, a));
 		let o = r.get(i.id) ?? [];
 		if (i.kind === "trigger") {
-			a.mode ??= Ye(i, "mode");
+			a.mode ??= Xe(i, "mode");
 			let e = o.filter((e) => e.kind === "read").map((e) => t.get(e.source)).filter((e) => e?.kind === "state"), n = e.find((e) => e.entity_id === i.origin.entity_id);
 			a.triggers.push({
 				transitionId: i.id,
@@ -1934,7 +1942,7 @@ function Xe(e) {
 				entityId: i.origin.entity_id ?? null,
 				areaId: i.origin.area_id ?? null,
 				placeId: n?.id ?? null,
-				event: Ye(i, "event")
+				event: Xe(i, "event")
 			});
 			for (let t of e) t !== n && (a.conditions.some((e) => e.placeId === t.id) || a.conditions.push({
 				placeId: t.id,
@@ -1950,17 +1958,17 @@ function Xe(e) {
 				entityId: n.entity_id ?? "",
 				areaId: n.origin.area_id ?? null,
 				placeId: n.id,
-				delay: Ye(i, "delay")
+				delay: Xe(i, "delay")
 			});
 		}
 	}
-	for (let e of n.values()) e.reads = Ze([...e.triggers.flatMap((e) => e.placeId ? [e.placeId] : []), ...e.conditions.map((e) => e.placeId)]), e.writes = Ze(e.effects.map((e) => e.placeId));
+	for (let e of n.values()) e.reads = Qe([...e.triggers.flatMap((e) => e.placeId ? [e.placeId] : []), ...e.conditions.map((e) => e.placeId)]), e.writes = Qe(e.effects.map((e) => e.placeId));
 	return [...n.values()];
 }
-function Ze(e) {
+function Qe(e) {
 	return [...new Set(e)];
 }
-function Qe(e) {
+function $e(e) {
 	let t = [];
 	for (let n of e) for (let r of e) if (n.id !== r.id) for (let e of n.writes) {
 		if (!r.reads.includes(e)) continue;
@@ -1974,7 +1982,7 @@ function Qe(e) {
 	}
 	return t;
 }
-function $e(e, t) {
+function et(e, t) {
 	let n = {
 		entityIds: /* @__PURE__ */ new Set(),
 		automationIds: /* @__PURE__ */ new Set(),
@@ -1987,14 +1995,14 @@ function $e(e, t) {
 	}
 	return n;
 }
-var et = {
+var tt = {
 	entityIds: /* @__PURE__ */ new Set(),
 	automationIds: /* @__PURE__ */ new Set(),
 	placeIds: /* @__PURE__ */ new Set(),
 	transitionIds: /* @__PURE__ */ new Set()
 };
 // src/logic/text.ts
-function tt(e, t, n) {
+function nt(e, t, n) {
 	let r = [], i = "";
 	for (let n of e.split(/\s+/).filter(Boolean)) {
 		let e = i ? `${i} ${n}` : n;
@@ -2006,7 +2014,7 @@ function tt(e, t, n) {
 	}
 	return r;
 }
-function nt(e, t) {
+function rt(e, t) {
 	let n = /^(\d+):(\d{2}):(\d{2})$/.exec(e);
 	if (!n) return e;
 	let r = [], i = (e, [t, n]) => {
@@ -2014,11 +2022,11 @@ function nt(e, t) {
 	};
 	return i(Number(n[1]), t.hour), i(Number(n[2]), t.minute), i(Number(n[3]), t.second), r.join(" ") || e;
 }
-var rt = 12, it = 12, at = 180, ot = 204, U = 16, st = 26;
-function ct(e, t) {
+var it = 12, at = 12, ot = 180, st = 204, H = 16, ct = 26;
+function lt(e, t) {
 	return e ?? `event:${t}`;
 }
-function lt(e, t, n, r, i = "mdi:clock-outline") {
+function ut(e, t, n, r, i = "mdi:clock-outline") {
 	let a = e.areas.map((e) => ({
 		id: e.id,
 		name: e.name,
@@ -2042,7 +2050,7 @@ function lt(e, t, n, r, i = "mdi:clock-outline") {
 		icon: t.icon,
 		state: t.state
 	});
-	for (let e of t) for (let t of e.triggers) t.entityId === null && u(ct(null, t.transitionId), s, {
+	for (let e of t) for (let t of e.triggers) t.entityId === null && u(lt(null, t.transitionId), s, {
 		entityId: null,
 		name: r(t.transitionId),
 		icon: i,
@@ -2051,39 +2059,39 @@ function lt(e, t, n, r, i = "mdi:clock-outline") {
 	let f = (e, t) => t.some((t) => t.channel === e), p = /* @__PURE__ */ new Map();
 	for (let e of t) {
 		let t = [
-			...e.triggers.map((e) => c.get(ct(e.entityId, e.transitionId))?.col),
+			...e.triggers.map((e) => c.get(lt(e.entityId, e.transitionId))?.col),
 			...e.effects.map((e) => c.get(e.entityId)?.col),
 			...e.conditions.map((e) => c.get(e.entityId)?.col)
-		].filter((e) => e !== void 0), n = e.triggers.map((e) => c.get(ct(e.entityId, e.transitionId))?.col).find((e) => e !== void 0) ?? 0, r = t.filter((e) => e < n).length, i = t.filter((e) => e > n).length, o = r > i || r === i && n === a.length - 1;
+		].filter((e) => e !== void 0), n = e.triggers.map((e) => c.get(lt(e.entityId, e.transitionId))?.col).find((e) => e !== void 0) ?? 0, r = t.filter((e) => e < n).length, i = t.filter((e) => e > n).length, o = r > i || r === i && n === a.length - 1;
 		p.set(e.id, o ? n : n + 1);
 	}
-	let m = [...p.values()].map((e) => ({ channel: e })), h = f(0, m) ? ot : 0, g = (e) => U + h + e * 384, ee = (e) => g(e) - ot / 2, _ = f(a.length, m) ? ot : 0, v = [], y = [], b = 0;
+	let m = [...p.values()].map((e) => ({ channel: e })), h = f(0, m) ? st : 0, g = (e) => H + h + e * 384, ee = (e) => g(e) - st / 2, _ = f(a.length, m) ? st : 0, v = [], y = [], b = 0;
 	a.forEach((e, t) => {
-		let n = l[t], r = 48 + n.length * 64 - rt + it;
+		let n = l[t], r = 48 + n.length * 64 - it + at;
 		y.push({
 			id: e.id,
 			name: e.name,
 			icon: e.icon,
 			col: t,
 			x: g(t),
-			y: U,
-			w: at,
+			y: H,
+			w: ot,
 			h: r
 		}), n.forEach((e, n) => {
 			let r = c.get(e);
 			r && v.push({
 				...r,
-				x: g(t) + it,
+				x: g(t) + at,
 				y: 64 + n * 64
 			});
-		}), b = Math.max(b, U + r);
+		}), b = Math.max(b, H + r);
 	});
 	let x = new Map(v.map((e) => [e.key, e])), S = [];
 	for (let e of t) {
 		for (let t of e.triggers) S.push({
 			automationId: e.id,
 			kind: "trigger",
-			tileKey: ct(t.entityId, t.transitionId)
+			tileKey: lt(t.entityId, t.transitionId)
 		});
 		for (let t of e.effects) S.push({
 			automationId: e.id,
@@ -2098,7 +2106,7 @@ function lt(e, t, n, r, i = "mdi:clock-outline") {
 	}
 	let C = [], w = /* @__PURE__ */ new Map();
 	for (let e of t) {
-		let t = S.filter((t) => t.automationId === e.id).map((e) => x.get(e.tileKey)).filter((e) => e !== void 0).map((e) => e.y + 26), n = t.length ? t.reduce((e, t) => e + t, 0) / t.length : U, r = p.get(e.id) ?? 0;
+		let t = S.filter((t) => t.automationId === e.id).map((e) => x.get(e.tileKey)).filter((e) => e !== void 0).map((e) => e.y + 26), n = t.length ? t.reduce((e, t) => e + t, 0) / t.length : H, r = p.get(e.id) ?? 0;
 		w.set(r, [...w.get(r) ?? [], {
 			id: e.id,
 			want: n
@@ -2106,7 +2114,7 @@ function lt(e, t, n, r, i = "mdi:clock-outline") {
 	}
 	for (let [e, t] of w) {
 		t.sort((e, t) => e.want - t.want || e.id.localeCompare(t.id));
-		let r = U;
+		let r = H;
 		for (let i of t) {
 			let t = Math.max(r, i.want - 23);
 			C.push({
@@ -2114,8 +2122,8 @@ function lt(e, t, n, r, i = "mdi:clock-outline") {
 				channel: e,
 				x: ee(e) - 70,
 				y: t,
-				lines: tt(n(i.id), 18, 2)
-			}), r = t + 46 + st, b = Math.max(b, t + 46 + U);
+				lines: nt(n(i.id), 18, 2)
+			}), r = t + 46 + ct, b = Math.max(b, t + 46 + H);
 		}
 	}
 	let T = new Map(C.map((e) => [e.automationId, e])), E = [];
@@ -2164,16 +2172,16 @@ function lt(e, t, n, r, i = "mdi:clock-outline") {
 		};
 	});
 	return {
-		width: g(a.length - 1) + at + _ + U,
-		height: b + U,
+		width: g(a.length - 1) + ot + _ + H,
+		height: b + H,
 		rooms: y,
 		tiles: v,
 		hubs: C,
 		edges: ne
 	};
 }
-var ut = 84, dt = 40;
-function ft(e, t) {
+var dt = 84, ft = 40;
+function pt(e, t) {
 	let n = e.transitions.filter((e) => e.origin.automation_id === t), r = new Set(n.map((e) => e.id)), i = e.arcs.filter((e) => r.has(e.kind === "produce" ? e.source : e.target)), a = new Set(i.map((e) => e.kind === "produce" ? e.target : e.source));
 	return {
 		transitions: n,
@@ -2181,8 +2189,8 @@ function ft(e, t) {
 		places: e.places.filter((e) => a.has(e.id) || e.origin.automation_id === t)
 	};
 }
-function pt(e, t) {
-	let { transitions: n, arcs: r, places: i } = ft(e, t), a = new Map(i.map((e) => [e.id, e])), o = new Map(n.map((e) => [e.id, e])), s = /* @__PURE__ */ new Map(), c = n.filter((e) => e.kind === "trigger"), l = n.filter((e) => e.kind === "action"), u = /* @__PURE__ */ new Set();
+function mt(e, t) {
+	let { transitions: n, arcs: r, places: i } = pt(e, t), a = new Map(i.map((e) => [e.id, e])), o = new Map(n.map((e) => [e.id, e])), s = /* @__PURE__ */ new Map(), c = n.filter((e) => e.kind === "trigger"), l = n.filter((e) => e.kind === "action"), u = /* @__PURE__ */ new Set();
 	c.forEach((e) => {
 		s.set(e.id, 1), u.add(e.id);
 	}), l.forEach((e, t) => {
@@ -2210,9 +2218,9 @@ function pt(e, t) {
 		let t = s.get(e) ?? 0, n = a.get(e);
 		u.has(e) ? p(t).mid.push(e) : n && d(n) ? p(t).up.push(e) : p(t).down.push(e);
 	}
-	let h = Math.max(0, ...[...f.values()].map((e) => e.up.length)), g = Math.max(1, ...[...f.values()].map((e) => e.mid.length)), ee = Math.max(0, ...[...f.values()].map((e) => e.down.length)), _ = dt + h * 120, v = /* @__PURE__ */ new Map();
+	let h = Math.max(0, ...[...f.values()].map((e) => e.up.length)), g = Math.max(1, ...[...f.values()].map((e) => e.mid.length)), ee = Math.max(0, ...[...f.values()].map((e) => e.down.length)), _ = ft + h * 120, v = /* @__PURE__ */ new Map();
 	for (let [e, t] of f) {
-		let n = ut + e * 150;
+		let n = dt + e * 150;
 		t.up.forEach((e, r) => v.set(e, {
 			x: n,
 			y: _ - (t.up.length - r) * 120
@@ -2234,7 +2242,7 @@ function pt(e, t) {
 			kind: n?.kind ?? r?.kind ?? "",
 			x: t.x,
 			y: t.y,
-			lines: tt(i, 22, 2),
+			lines: nt(i, 22, 2),
 			annotations: r?.annotations ?? []
 		};
 	};
@@ -2259,28 +2267,45 @@ function pt(e, t) {
 	return {
 		automationId: t,
 		width: 168 + Math.max(0, ...s.values()) * 150,
-		height: _ + (g + ee) * 120 + dt,
+		height: _ + (g + ee) * 120 + ft,
 		nodes: y,
 		edges: x
 	};
 }
 // src/views/shared.ts
-function W(e, t, n) {
+function U(e, t, n) {
 	e.dispatchEvent(new CustomEvent(t, {
 		detail: n,
 		bubbles: !0,
 		composed: !0
 	}));
 }
-function mt(e) {
+function ht(e) {
 	return P`
     <div class="demo-banner" role="note">
+      ${W("mdi:flask-outline")}
       <span class="demo-tag">${e.demoTitle}</span>
-      <span>${e.demoText}</span>
+      <span class="demo-text">${e.demoText}</span>
     </div>
   `;
 }
-function ht(e, t) {
+function gt(e) {
+	return {
+		draft: "mdi:pencil-outline",
+		checked: "mdi:shield-check-outline",
+		failed: "mdi:alert-circle-outline",
+		applied: "mdi:check-circle-outline",
+		reverted: "mdi:undo-variant",
+		discarded: "mdi:close-circle-outline"
+	}[e] ?? "mdi:circle-outline";
+}
+function _t(e) {
+	return e === "error" ? "mdi:alert-circle" : e === "warning" ? "mdi:alert" : "mdi:information";
+}
+function vt(e, t) {
+	return P`<span class="badge ${t}">${W(gt(t))}${Ke(e, t)}</span>`;
+}
+function yt(e, t) {
 	return {
 		busy: e.errBusy,
 		model_error: e.errModel,
@@ -2293,24 +2318,33 @@ function ht(e, t) {
 		not_found: e.errNotFound
 	}[t] ?? e.errUnknown;
 }
-function gt(e, t) {
+function bt(e, t) {
 	return P`
-    <div class="error" role="alert">
-      <p>${ht(e, t.code)}</p>
-      <p class="detail">${t.message}</p>
-      <p class="detail code">${e.errorCode}: ${t.code}</p>
+    <div class="alert error" role="alert">
+      ${W("mdi:alert-circle")}
+      <div class="alert-body">
+        <p>${yt(e, t.code)}</p>
+        <p class="detail">${t.message}</p>
+        <p class="detail code">${e.errorCode}: ${t.code}</p>
+      </div>
     </div>
   `;
 }
-var _t = o`
+function W(e) {
+	return P`<ha-icon icon=${e}></ha-icon>`;
+}
+var xt = o`
   :host {
     display: block;
     color: var(--primary-text-color);
+    font-size: 14px;
+    line-height: 1.5;
   }
   h2 {
     margin: 0 0 12px;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 500;
+    line-height: 1.3;
   }
   h3 {
     margin: 0 0 8px;
@@ -2323,6 +2357,19 @@ var _t = o`
   .muted {
     color: var(--secondary-text-color);
   }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  ha-icon {
+    --mdc-icon-size: 20px;
+    flex: none;
+  }
+  /* Example data banner: one quiet line, still clearly marked. */
   .demo-banner {
     display: flex;
     flex-wrap: wrap;
@@ -2331,95 +2378,160 @@ var _t = o`
     margin-bottom: 16px;
     padding: 8px 12px;
     font-size: 13px;
-    color: var(--primary-text-color);
-    background-color: var(--secondary-background-color);
-    border: 1px dashed var(--warning-color, var(--primary-color));
+    color: var(--secondary-text-color);
+    border: 1px dashed var(--warning-color, var(--divider-color));
     border-radius: 8px;
   }
+  .demo-banner ha-icon {
+    --mdc-icon-size: 18px;
+    color: var(--warning-color, var(--secondary-text-color));
+  }
   .demo-tag {
-    padding: 1px 8px;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.7;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--text-primary-color);
-    background-color: var(--warning-color, var(--primary-color));
+    color: var(--primary-text-color);
+    background-color: color-mix(in srgb, var(--warning-color, var(--primary-color)) 22%, transparent);
+    border: 1px solid var(--warning-color, var(--primary-color));
     border-radius: 10px;
+  }
+  .demo-text {
+    flex: 1 1 260px;
   }
   .card {
     margin-bottom: 16px;
-    padding: 16px;
-    background-color: var(--card-background-color);
-    border: 1px solid var(--divider-color);
+    padding: 20px;
+    background-color: var(--ha-card-background, var(--card-background-color));
+    border: var(--ha-card-border-width, 1px) solid var(--ha-card-border-color, var(--divider-color));
     border-radius: var(--ha-card-border-radius, 12px);
+    box-shadow: var(--ha-card-box-shadow, none);
   }
-  .error {
+  @media (max-width: 480px) {
+    .card {
+      padding: 16px;
+    }
+  }
+  /* Alert rows: icon and colour by kind, the kind is also written out. */
+  .alert {
+    --alert-color: var(--info-color, var(--primary-color));
+    display: flex;
+    gap: 12px;
     margin: 12px 0 0;
     padding: 12px 16px;
-    color: var(--error-color);
-    border: 1px solid var(--error-color);
+    color: var(--primary-text-color);
+    background-color: color-mix(in srgb, var(--alert-color) 12%, var(--card-background-color, transparent));
+    border: 1px solid color-mix(in srgb, var(--alert-color) 45%, transparent);
+    border-inline-start: 4px solid var(--alert-color);
     border-radius: 8px;
   }
-  .error p:last-child {
+  .alert > ha-icon {
+    margin-top: 1px;
+    color: var(--alert-color);
+  }
+  .alert.error {
+    --alert-color: var(--error-color);
+  }
+  .alert.warning {
+    --alert-color: var(--warning-color);
+  }
+  .alert.success {
+    --alert-color: var(--success-color, var(--primary-color));
+  }
+  .alert-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .alert-body p:last-child {
     margin-bottom: 0;
   }
-  .error .detail {
+  .alert .detail {
     margin-bottom: 4px;
     color: var(--secondary-text-color);
     font-family: var(--code-font-family, monospace);
     font-size: 13px;
     overflow-wrap: anywhere;
   }
+  .alert button {
+    margin-top: 4px;
+  }
+  /* Status badge: tinted pill, coloured icon, text in the normal text colour. */
   .badge {
-    display: inline-block;
-    padding: 2px 10px;
-    font-size: 12px;
+    --badge-color: var(--secondary-text-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px 2px 6px;
+    font-size: 13px;
     font-weight: 500;
     line-height: 1.5;
     white-space: nowrap;
     color: var(--primary-text-color);
-    background-color: var(--secondary-background-color);
-    border: 1px solid var(--divider-color);
-    border-radius: 12px;
+    background-color: color-mix(in srgb, var(--badge-color) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--badge-color) 40%, transparent);
+    border-radius: 999px;
   }
-  .badge.applied,
-  .badge.checked {
-    border-color: var(--success-color, var(--primary-color));
+  .badge ha-icon {
+    --mdc-icon-size: 16px;
+    color: var(--badge-color);
+  }
+  .badge.checked,
+  .badge.proposal {
+    --badge-color: var(--primary-color);
+  }
+  .badge.applied {
+    --badge-color: var(--success-color, var(--primary-color));
   }
   .badge.failed,
   .badge.error {
-    border-color: var(--error-color);
+    --badge-color: var(--error-color);
   }
+  .badge.draft,
   .badge.warning {
-    border-color: var(--warning-color);
+    --badge-color: var(--warning-color);
   }
-  .badge.discarded,
-  .badge.reverted,
   .badge.info {
-    border-color: var(--secondary-text-color);
+    --badge-color: var(--info-color, var(--primary-color));
   }
-  .badge.proposal {
-    color: var(--text-primary-color);
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-  }
+  /* Buttons: native-looking pills. Primary is filled, secondary outlined. */
   button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 0 20px;
     font: inherit;
-    padding: 8px 16px;
+    font-weight: 500;
     cursor: pointer;
     color: var(--text-primary-color);
-    background-color: var(--primary-color);
-    border: 1px solid var(--primary-color);
-    border-radius: 8px;
+    /* Darkened a little so the label keeps its contrast on bright primary colours. */
+    background-color: color-mix(in srgb, var(--primary-color) 74%, black);
+    border: 1px solid color-mix(in srgb, var(--primary-color) 74%, black);
+    border-radius: var(--ha-button-border-radius, 999px);
   }
-  button.secondary {
-    color: var(--primary-color);
+  button:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  button.secondary,
+  button.danger {
+    color: var(--primary-text-color);
     background-color: transparent;
-    border-color: var(--primary-color);
+    border-color: var(--outline-color, var(--divider-color));
+  }
+  button.secondary:hover:not(:disabled),
+  button.danger:hover:not(:disabled) {
+    filter: none;
+    background-color: var(--secondary-background-color);
+  }
+  button.secondary ha-icon {
+    color: var(--primary-color);
   }
   button.danger {
     color: var(--error-color);
-    background-color: transparent;
     border-color: var(--error-color);
   }
   button:disabled {
@@ -2428,7 +2540,10 @@ var _t = o`
   }
   button:focus-visible,
   textarea:focus-visible,
-  summary:focus-visible {
+  select:focus-visible,
+  summary:focus-visible,
+  a:focus-visible,
+  pre:focus-visible {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
   }
@@ -2437,9 +2552,32 @@ var _t = o`
     flex-wrap: wrap;
     gap: 8px;
   }
-  ha-icon {
-    --mdc-icon-size: 20px;
-    flex: none;
+  /* Segmented control for switching between two representations. */
+  .segmented {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background-color: var(--secondary-background-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 999px;
+  }
+  .segmented button {
+    min-height: 32px;
+    padding: 0 16px;
+    color: var(--secondary-text-color);
+    background: transparent;
+    border-color: transparent;
+    border-radius: 999px;
+  }
+  .segmented button.on {
+    color: var(--primary-text-color);
+    background-color: var(--card-background-color);
+    border-color: var(--divider-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  .segmented button:hover:not(:disabled) {
+    filter: none;
+    color: var(--primary-text-color);
   }
   dl.facts {
     display: grid;
@@ -2463,7 +2601,7 @@ var _t = o`
       margin-bottom: 8px;
     }
   }
-`, vt = class extends B {
+`, St = class extends B {
 	constructor(...e) {
 		super(...e), this._layout = null, this._layoutKey = [];
 	}
@@ -2485,7 +2623,7 @@ var _t = o`
 			this.automations,
 			this.t
 		];
-		(!this._layout || e.some((e, t) => e !== this._layoutKey[t])) && (this._layoutKey = e, this._layout = lt(this.house, this.automations.map((e) => e.info), (e) => this._alias(e), (e) => this.automations.flatMap((e) => e.info.triggers).find((t) => t.transitionId === e)?.label ?? ""));
+		(!this._layout || e.some((e, t) => e !== this._layoutKey[t])) && (this._layoutKey = e, this._layout = ut(this.house, this.automations.map((e) => e.info), (e) => this._alias(e), (e) => this.automations.flatMap((e) => e.info.triggers).find((t) => t.transitionId === e)?.label ?? ""));
 	}
 	_alias(e) {
 		return this.automations.find((t) => t.info.id === e)?.alias ?? e;
@@ -2497,30 +2635,30 @@ var _t = o`
 	render() {
 		let e = this.t;
 		return P`
-      ${mt(e)}
+      ${ht(e)}
       <div class="toolbar">
         <div class="segmented" role="group" aria-label=${e.viewMode}>
           ${["house", "net"].map((t) => P`<button
               type="button"
               class=${this.mode === t ? "on" : ""}
               aria-pressed=${this.mode === t ? "true" : "false"}
-              @click=${() => W(this, "set-mode", { mode: t })}
+              @click=${() => U(this, "set-mode", { mode: t })}
             >
               ${t === "house" ? e.viewHouse : e.viewNet}
             </button>`)}
         </div>
-        ${this._hasMarks ? L : P`<button type="button" class="secondary" @click=${() => W(this, "mark-example")}>
+        ${this._hasMarks ? L : P`<button type="button" class="secondary" @click=${() => U(this, "mark-example")}>
               ${e.markExample}
             </button>`}
         ${this._hasMarks ? P`<span class="chip marked">
               ${e.marksActive}
-              <button type="button" class="link" @click=${() => W(this, "clear-marks")}>
+              <button type="button" class="link" @click=${() => U(this, "clear-marks")}>
                 ${e.clear}
               </button>
             </span>` : L}
         ${this.focusId ? P`<span class="chip">
               ${e.focusActive(this._alias(this.focusId))}
-              <button type="button" class="link" @click=${() => W(this, "clear-focus")}>
+              <button type="button" class="link" @click=${() => U(this, "clear-focus")}>
                 ${e.clear}
               </button>
             </span>` : L}
@@ -2562,8 +2700,8 @@ var _t = o`
                 <foreignObject x=${e.x + 8} y=${e.y + 12} width="28" height="28">
                   <div class="icon-wrap"><ha-icon icon=${e.icon}></ha-icon></div>
                 </foreignObject>
-                <text class="tile-name" x=${e.x + 42} y=${e.state ? e.y + 22 : e.y + 31}>${yt(e.name, 18)}</text>
-                ${e.state ? F`<text class="tile-state" x=${e.x + 42} y=${e.y + 40}>${Ke(this.language, e.state)}</text>` : L}
+                <text class="tile-name" x=${e.x + 42} y=${e.state ? e.y + 22 : e.y + 31}>${Ct(e.name, 18)}</text>
+                ${e.state ? F`<text class="tile-state" x=${e.x + 42} y=${e.y + 40}>${qe(this.language, e.state)}</text>` : L}
               </g>`;
 		})}
           ${t.hubs.map((t) => {
@@ -2574,12 +2712,12 @@ var _t = o`
                 tabindex="0"
                 role="button"
                 aria-label=${this._alias(t.automationId)}
-                @click=${() => W(this, "focus-automation", {
+                @click=${() => U(this, "focus-automation", {
 				automationId: t.automationId,
 				toggle: !0
 			})}
                 @keydown=${(e) => {
-				(e.key === "Enter" || e.key === " ") && (e.preventDefault(), W(this, "focus-automation", {
+				(e.key === "Enter" || e.key === " ") && (e.preventDefault(), U(this, "focus-automation", {
 					automationId: t.automationId,
 					toggle: !0
 				}));
@@ -2613,7 +2751,7 @@ var _t = o`
     `;
 	}
 	_renderDiagram(e) {
-		let t = this.t, n = pt(this.net, e.info.id), r = {
+		let t = this.t, n = mt(this.net, e.info.id), r = {
 			mode: t.annotationMode,
 			delay: t.annotationDelay,
 			event: t.annotationEvent,
@@ -2726,29 +2864,13 @@ var _t = o`
     `;
 	}
 	static {
-		this.styles = [_t, o`
+		this.styles = [xt, o`
       .toolbar {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 8px 12px;
         margin-bottom: 12px;
-      }
-      .segmented {
-        display: inline-flex;
-        border: 1px solid var(--primary-color);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      .segmented button {
-        border: none;
-        border-radius: 0;
-        color: var(--primary-color);
-        background: transparent;
-      }
-      .segmented button.on {
-        color: var(--text-primary-color);
-        background-color: var(--primary-color);
       }
       .chip {
         display: inline-flex;
@@ -2976,12 +3098,12 @@ var _t = o`
     `];
 	}
 };
-function yt(e, t) {
+function Ct(e, t) {
 	return e.length > t ? `${e.slice(0, t - 1)}…` : e;
 }
-customElements.define("ai-drafts-domain", vt);
+customElements.define("ai-drafts-domain", St);
 // src/views/inventory.ts
-var bt = class extends B {
+var wt = class extends B {
 	static {
 		this.properties = {
 			t: { attribute: !1 },
@@ -2993,7 +3115,7 @@ var bt = class extends B {
 	render() {
 		let e = this.t;
 		return P`
-      ${mt(e)}
+      ${ht(e)}
       <h2>${e.inventoryHeading}</h2>
       ${this.items.length === 0 ? P`<p class="muted">${e.inventoryEmpty}</p>` : L}
       <ul class="list">
@@ -3016,7 +3138,7 @@ var bt = class extends B {
           <span class="part">${n.triggers.map((e) => e.text).join(", ")}</span>
           <span class="arrow" aria-hidden="true">${t.summaryArrow}</span>
           <span class="part"
-            >${n.effects.map((e) => e.delay ? `${t.after(nt(e.delay, r))}: ${e.text}` : e.text).join(", ")}</span
+            >${n.effects.map((e) => e.delay ? `${t.after(rt(e.delay, r))}: ${e.text}` : e.text).join(", ")}</span
           >
         </p>
         <dl class="facts">
@@ -3034,7 +3156,7 @@ var bt = class extends B {
           <button
             type="button"
             class="secondary"
-            @click=${() => W(this, "focus-automation", { automationId: e.id })}
+            @click=${() => U(this, "focus-automation", { automationId: e.id })}
           >
             ${t.showInDomainView}
           </button>
@@ -3043,7 +3165,7 @@ var bt = class extends B {
     `;
 	}
 	static {
-		this.styles = [_t, o`
+		this.styles = [xt, o`
       .list {
         margin: 0;
         padding: 0;
@@ -3081,9 +3203,9 @@ var bt = class extends B {
     `];
 	}
 };
-customElements.define("ai-drafts-inventory", bt);
+customElements.define("ai-drafts-inventory", wt);
 // src/logic/changeset-actions.ts
-var xt = {
+var Tt = {
 	draft: ["discard"],
 	checked: ["apply", "discard"],
 	failed: ["discard"],
@@ -3091,38 +3213,38 @@ var xt = {
 	reverted: [],
 	discarded: []
 };
-function St(e) {
-	return xt[e];
+function Et(e) {
+	return Tt[e];
 }
 // src/logic/yaml.ts
-var Ct = /^[\p{L}_][\p{L}\p{N}_ ./-]*$/u, wt = /^(true|false|yes|no|on|off|y|n|null|~)$/i;
-function Tt(e) {
-	return e === null ? "null" : typeof e == "string" ? Ct.test(e) && !wt.test(e) && !e.endsWith(" ") ? e : JSON.stringify(e) : String(e);
+var Dt = /^[\p{L}_][\p{L}\p{N}_ ./-]*$/u, Ot = /^(true|false|yes|no|on|off|y|n|null|~)$/i;
+function kt(e) {
+	return e === null ? "null" : typeof e == "string" ? Dt.test(e) && !Ot.test(e) && !e.endsWith(" ") ? e : JSON.stringify(e) : String(e);
 }
-function Et(e) {
+function At(e) {
 	return typeof e != "object" || !e;
 }
-function Dt(e) {
+function jt(e) {
 	return typeof e == "object" && !!e && (Array.isArray(e) ? e.length === 0 : Object.keys(e).length === 0);
 }
-function Ot(e) {
-	return Array.isArray(e) ? "[]" : typeof e == "object" && e ? "{}" : Tt(e);
+function Mt(e) {
+	return Array.isArray(e) ? "[]" : typeof e == "object" && e ? "{}" : kt(e);
 }
-function kt(e, t) {
+function Nt(e, t) {
 	let n = [];
-	if (Array.isArray(e)) for (let r of e) if (Et(r) || Dt(r)) n.push(`${t}- ${Ot(r)}`);
+	if (Array.isArray(e)) for (let r of e) if (At(r) || jt(r)) n.push(`${t}- ${Mt(r)}`);
 	else {
-		let [e, ...i] = kt(r, `${t}  `);
+		let [e, ...i] = Nt(r, `${t}  `);
 		n.push(`${t}- ${e.slice(t.length + 2)}`, ...i);
 	}
-	else if (typeof e == "object" && e) for (let [r, i] of Object.entries(e)) Et(i) || Dt(i) ? n.push(`${t}${Tt(r)}: ${Ot(i)}`) : n.push(`${t}${Tt(r)}:`, ...kt(i, `${t}  `));
+	else if (typeof e == "object" && e) for (let [r, i] of Object.entries(e)) At(i) || jt(i) ? n.push(`${t}${kt(r)}: ${Mt(i)}`) : n.push(`${t}${kt(r)}:`, ...Nt(i, `${t}  `));
 	return n;
 }
 function G(e) {
-	return Et(e) || Dt(e) ? Ot(e) : kt(e, "").join("\n");
+	return At(e) || jt(e) ? Mt(e) : Nt(e, "").join("\n");
 }
 // src/logic/describe-config.ts
-var K = (e) => typeof e == "object" && !!e && !Array.isArray(e), At = /^[a-z0-9_]+\.[a-z0-9_]+$/, jt = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/, Mt = ["id", "alias"];
+var K = (e) => typeof e == "object" && !!e && !Array.isArray(e), Pt = /^[a-z0-9_]+\.[a-z0-9_]+$/, Ft = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/, It = ["id", "alias"];
 function q(e) {
 	return e == null ? [] : Array.isArray(e) ? e : [e];
 }
@@ -3130,7 +3252,7 @@ function J(e) {
 	let t = q(e);
 	return t.length === 0 || !t.every((e) => typeof e == "string") ? null : t;
 }
-function Nt(e, t) {
+function Lt(e, t) {
 	return e.quote(t);
 }
 function Y(e, t, n) {
@@ -3139,30 +3261,30 @@ function Y(e, t, n) {
 		type: n
 	}).format(t);
 }
-function Pt(e) {
+function Rt(e) {
 	return {
 		hour: e.unitHour,
 		minute: e.unitMinute,
 		second: e.unitSecond
 	};
 }
-function Ft(e, t) {
-	return typeof t == "boolean" ? Nt(e.t, Ke(e.language, t ? "on" : "off")) : typeof t == "string" || typeof t == "number" ? Nt(e.t, Ke(e.language, String(t))) : null;
+function zt(e, t) {
+	return typeof t == "boolean" ? Lt(e.t, qe(e.language, t ? "on" : "off")) : typeof t == "string" || typeof t == "number" ? Lt(e.t, qe(e.language, String(t))) : null;
 }
-function It(e, t) {
-	let n = q(t).map((t) => Ft(e, t));
+function Bt(e, t) {
+	let n = q(t).map((t) => zt(e, t));
 	return n.length === 0 || n.some((e) => e === null) ? null : Y(e, n, "disjunction");
 }
 function X(e, t) {
-	let n = Pt(e.t);
+	let n = Rt(e.t);
 	if (typeof t == "string") {
 		let e = /^(\d+):(\d{2})(?::(\d{2}))?$/.exec(t);
-		return e ? nt(`${e[1]}:${e[2]}:${e[3] ?? "00"}`, n) : null;
+		return e ? rt(`${e[1]}:${e[2]}:${e[3] ?? "00"}`, n) : null;
 	}
 	if (typeof t == "number") {
 		if (!Number.isFinite(t) || t < 0) return null;
 		let e = Math.round(t), r = Math.floor(e / 3600), i = Math.floor(e % 3600 / 60), a = e % 60;
-		return nt(`${r}:${String(i).padStart(2, "0")}:${String(a).padStart(2, "0")}`, n);
+		return rt(`${r}:${String(i).padStart(2, "0")}:${String(a).padStart(2, "0")}`, n);
 	}
 	if (K(t)) {
 		let n = [
@@ -3178,16 +3300,16 @@ function X(e, t) {
 	}
 	return null;
 }
-function Lt(e, t) {
+function Vt(e, t) {
 	if (typeof t != "string") return null;
-	let n = jt.exec(t);
+	let n = Ft.exec(t);
 	if (n) {
 		let e = n[1].padStart(2, "0");
 		return { clock: n[3] && n[3] !== "00" ? `${e}:${n[2]}:${n[3]}` : `${e}:${n[2]}` };
 	}
-	return At.test(t) ? { entity: e.nameOf(t) } : null;
+	return Pt.test(t) ? { entity: e.nameOf(t) } : null;
 }
-function Rt(e, t) {
+function Ht(e, t) {
 	if (t === void 0) return {
 		text: "",
 		before: !1
@@ -3200,21 +3322,21 @@ function Rt(e, t) {
 		before: n
 	};
 }
-function zt(e, t) {
+function Ut(e, t) {
 	return t === "sunrise" ? e.t.sunrise : t === "sunset" ? e.t.sunset : null;
 }
-function Bt(e, t) {
-	return typeof t == "number" ? String(t) : typeof t == "string" && At.test(t) ? e.nameOf(t) : typeof t == "string" && t.trim() !== "" && Number.isFinite(Number(t)) ? t.trim() : null;
+function Wt(e, t) {
+	return typeof t == "number" ? String(t) : typeof t == "string" && Pt.test(t) ? e.nameOf(t) : typeof t == "string" && t.trim() !== "" && Number.isFinite(Number(t)) ? t.trim() : null;
 }
-function Vt(e, t, n) {
+function Gt(e, t, n) {
 	return Y(e, t.map((t) => e.nameOf(t)), n);
 }
-function Ht(e, ...t) {
+function Kt(e, ...t) {
 	for (let n of t) if (typeof e[n] == "string") return e[n];
 	return null;
 }
 function Z(e, t) {
-	return Object.keys(e).every((e) => t.includes(e) || Mt.includes(e));
+	return Object.keys(e).every((e) => t.includes(e) || It.includes(e));
 }
 function Q(e, t, n) {
 	return {
@@ -3225,10 +3347,10 @@ function Q(e, t, n) {
 		}]
 	};
 }
-function Ut(e, t) {
+function qt(e, t) {
 	let n = t.t, r = (t) => Q(t ? n.unknownTriggerOf(t) : n.unknownTrigger, e, n.fragmentYaml);
 	if (!K(e)) return r(null);
-	let i = Ht(e, "trigger", "platform"), a = (e) => ({
+	let i = Kt(e, "trigger", "platform"), a = (e) => ({
 		text: e,
 		fragments: []
 	}), o = () => {
@@ -3248,7 +3370,7 @@ function Ut(e, t) {
 			])) break;
 			let r = J(e.entity_id), i = o();
 			if (!r || i === void 0) break;
-			let s = Vt(t, r, "disjunction"), c = e.to === void 0 || e.to === null ? null : It(t, e.to), l = e.from === void 0 || e.from === null ? null : It(t, e.from);
+			let s = Gt(t, r, "disjunction"), c = e.to === void 0 || e.to === null ? null : Bt(t, e.to), l = e.from === void 0 || e.from === null ? null : Bt(t, e.from);
 			if (e.to !== void 0 && e.to !== null && c === null || e.from !== void 0 && e.from !== null && l === null) break;
 			return a(c && l ? n.changesFromTo(s, l, c) + i : c ? n.changesTo(s, c) + i : l ? n.changesFrom(s, l) + i : n.changes(s) + i);
 		}
@@ -3258,7 +3380,7 @@ function Ut(e, t) {
 				"platform",
 				"at"
 			])) break;
-			let r = q(e.at).map((e) => Lt(t, e));
+			let r = q(e.at).map((e) => Vt(t, e));
 			if (r.length === 0 || r.some((e) => e === null)) break;
 			return a(Y(t, r.map((e) => "clock" in e ? n.timeAt(n.clock(e.clock)) : n.timeAtEntity(e.entity)), "disjunction"));
 		}
@@ -3269,7 +3391,7 @@ function Ut(e, t) {
 				"event",
 				"offset"
 			])) break;
-			let r = zt(t, e.event), i = Rt(t, e.offset);
+			let r = Ut(t, e.event), i = Ht(t, e.offset);
 			if (!r || !i) break;
 			return a(n.sunTrigger(r, i.text, i.before));
 		}
@@ -3282,17 +3404,17 @@ function Ut(e, t) {
 				"below",
 				"for"
 			])) break;
-			let r = J(e.entity_id), i = o(), s = e.above === void 0 ? null : Bt(t, e.above), c = e.below === void 0 ? null : Bt(t, e.below);
+			let r = J(e.entity_id), i = o(), s = e.above === void 0 ? null : Wt(t, e.above), c = e.below === void 0 ? null : Wt(t, e.below);
 			if (!r || i === void 0 || e.above !== void 0 && s === null || e.below !== void 0 && c === null || s === null && c === null) break;
-			return a(n.triggerNumeric(Vt(t, r, "disjunction"), s, c) + i);
+			return a(n.triggerNumeric(Gt(t, r, "disjunction"), s, c) + i);
 		}
 	}
 	return r(i);
 }
-function Wt(e, t) {
+function Jt(e, t) {
 	let n = t.t, r = (t) => Q(t ? n.unknownConditionOf(t) : n.unknownCondition, e, n.fragmentYaml);
 	if (!K(e)) return r(null);
-	let i = Ht(e, "condition"), a = (e) => ({
+	let i = Kt(e, "condition"), a = (e) => ({
 		text: e,
 		fragments: []
 	});
@@ -3304,14 +3426,14 @@ function Wt(e, t) {
 				"state",
 				"for"
 			])) break;
-			let r = J(e.entity_id), i = It(t, e.state), o = "";
+			let r = J(e.entity_id), i = Bt(t, e.state), o = "";
 			if (e.for !== void 0) {
 				let r = X(t, e.for);
 				if (r === null) break;
 				o = n.conditionFor(r);
 			}
 			if (!r || !i) break;
-			return a(n.isState(Vt(t, r, "conjunction"), i) + o);
+			return a(n.isState(Gt(t, r, "conjunction"), i) + o);
 		}
 		case "numeric_state": {
 			if (!Z(e, [
@@ -3320,9 +3442,9 @@ function Wt(e, t) {
 				"above",
 				"below"
 			])) break;
-			let r = J(e.entity_id), i = e.above === void 0 ? null : Bt(t, e.above), o = e.below === void 0 ? null : Bt(t, e.below);
+			let r = J(e.entity_id), i = e.above === void 0 ? null : Wt(t, e.above), o = e.below === void 0 ? null : Wt(t, e.below);
 			if (!r || e.above !== void 0 && i === null || e.below !== void 0 && o === null || i === null && o === null) break;
-			return a(n.conditionNumeric(Vt(t, r, "conjunction"), i, o));
+			return a(n.conditionNumeric(Gt(t, r, "conjunction"), i, o));
 		}
 		case "sun": {
 			if (!Z(e, [
@@ -3335,7 +3457,7 @@ function Wt(e, t) {
 			let o = [];
 			for (let [a, s] of [["after", "after"], ["before", "before"]]) {
 				if (e[a] === void 0) continue;
-				let c = zt(t, e[a]), l = Rt(t, e[`${a}_offset`]);
+				let c = Ut(t, e[a]), l = Ht(t, e[`${a}_offset`]);
 				if (!c || !l) return r(i);
 				o.push(n.sunCondition(s, c, l.text, l.before));
 			}
@@ -3352,7 +3474,7 @@ function Wt(e, t) {
 			let r = [], i = !1;
 			for (let a of ["after", "before"]) {
 				if (e[a] === void 0) continue;
-				let o = Lt(t, e[a]);
+				let o = Vt(t, e[a]);
 				o === null ? i = !0 : r.push("clock" in o ? n.timeCondition(a, n.clock(o.clock)) : n.timeConditionEntity(a, o.entity));
 			}
 			if (i) break;
@@ -3379,11 +3501,11 @@ function Wt(e, t) {
 	}
 	return r(i);
 }
-function Gt(e) {
+function Yt(e) {
 	let t = {}, n = [], r = (e) => {
 		if (K(e)) for (let [r, i] of Object.entries(e)) {
 			let e = r === "entity_id" ? J(i) : null;
-			e && e.every((e) => At.test(e)) ? n.push(...e) : t[r] = i;
+			e && e.every((e) => Pt.test(e)) ? n.push(...e) : t[r] = i;
 		}
 	};
 	return r(e.target), e.entity_id !== void 0 && r({ entity_id: e.entity_id }), {
@@ -3391,10 +3513,10 @@ function Gt(e) {
 		rest: t
 	};
 }
-function Kt(e, t) {
+function Xt(e, t) {
 	let n = t.t;
 	if (!K(e)) return Q(n.unknownAction, e, n.fragmentYaml);
-	let r = Ht(e, "action", "service");
+	let r = Kt(e, "action", "service");
 	if (r !== null && /^[a-z0-9_]+\.[a-z0-9_]+$/.test(r)) {
 		let i = [
 			"action",
@@ -3407,7 +3529,7 @@ function Kt(e, t) {
 			"id"
 		];
 		if (Object.keys(e).filter((e) => !i.includes(e)).length === 0) {
-			let { ids: i, rest: a } = Gt(e), o = i.length > 0 ? Y(t, i.map((e) => t.nameOf(e)), "conjunction") : null, s = r.split(".")[1], c;
+			let { ids: i, rest: a } = Yt(e), o = i.length > 0 ? Y(t, i.map((e) => t.nameOf(e)), "conjunction") : null, s = r.split(".")[1], c;
 			c = o && s === "turn_on" ? n.turnOn(o) : o && s === "turn_off" ? n.turnOff(o) : o && s === "toggle" ? n.toggle(o) : o ? n.callOn(r, o) : n.call(r);
 			let l = [];
 			return Object.keys(a).length > 0 && l.push({
@@ -3430,16 +3552,16 @@ function Kt(e, t) {
 			fragments: []
 		};
 	}
-	let i = Object.keys(e).find((e) => !Mt.includes(e)) ?? null;
+	let i = Object.keys(e).find((e) => !It.includes(e)) ?? null;
 	return Q(i ? n.unknownActionOf(i) : n.unknownAction, e, n.fragmentYaml);
 }
-function qt(e) {
+function Zt(e) {
 	return {
 		...e,
 		text: e.text.charAt(0).toUpperCase() + e.text.slice(1)
 	};
 }
-var Jt = [
+var Qt = [
 	"id",
 	"alias",
 	"description",
@@ -3452,8 +3574,8 @@ var Jt = [
 	"actions",
 	"action"
 ];
-function Yt(e, t) {
-	let n = (t, n) => e[t] === void 0 ? e[n] : e[t], r = (e) => typeof e == "string" && e ? e : null, i = Object.entries(e).filter(([e]) => !Jt.includes(e)).map(([e, t]) => ({
+function $t(e, t) {
+	let n = (t, n) => e[t] === void 0 ? e[n] : e[t], r = (e) => typeof e == "string" && e ? e : null, i = Object.entries(e).filter(([e]) => !Qt.includes(e)).map(([e, t]) => ({
 		label: e,
 		yaml: G({ [e]: t })
 	}));
@@ -3461,25 +3583,25 @@ function Yt(e, t) {
 		alias: r(e.alias),
 		description: r(e.description),
 		mode: r(e.mode),
-		triggers: q(n("triggers", "trigger")).map((e) => qt(Ut(e, t))),
-		conditions: q(n("conditions", "condition")).map((e) => qt(Wt(e, t))),
-		actions: q(n("actions", "action")).map((e) => qt(Kt(e, t))),
+		triggers: q(n("triggers", "trigger")).map((e) => Zt(qt(e, t))),
+		conditions: q(n("conditions", "condition")).map((e) => Zt(Jt(e, t))),
+		actions: q(n("actions", "action")).map((e) => Zt(Xt(e, t))),
 		other: i
 	};
 }
 // src/logic/diff.ts
-function Xt(e, t) {
+function en(e, t) {
 	let n = (e, t) => e === null ? [] : e.split("\n").map((e) => ({
 		kind: t,
 		text: e
 	}));
 	return [...n(e, "remove"), ...n(t, "add")];
 }
-function Zt(e) {
-	return Xt(e.before ? G(e.before) : null, e.after ? G(e.after) : null);
+function tn(e) {
+	return en(e.before ? G(e.before) : null, e.after ? G(e.after) : null);
 }
 // src/views/proposal.ts
-var Qt = ["description", "yaml"], $t = class extends B {
+var nn = ["description", "yaml"], rn = class extends B {
 	static {
 		this.properties = {
 			t: { attribute: !1 },
@@ -3488,30 +3610,29 @@ var Qt = ["description", "yaml"], $t = class extends B {
 			section: { attribute: !1 },
 			nameOf: { attribute: !1 },
 			pending: { attribute: !1 },
-			error: { attribute: !1 }
+			error: { attribute: !1 },
+			_copied: { state: !0 }
 		};
 	}
 	constructor() {
-		super(), this.section = "description", this.pending = null, this.error = null;
+		super(), this._names = [], this._copied = null, this.section = "description", this.pending = null, this.error = null;
 	}
 	render() {
 		let e = this.t, t = this.proposal;
 		return t ? P`
-      <section class="card">${this._renderHead(t)}</section>
-      ${this._renderStatusNote(t)}
+      <section class="card">${this._renderHead(t)}${this._renderStatusNote(t)}</section>
       <section class="card">${this._renderBody(t)}</section>
       <section class="card">
-        <h2>${e.findingsHeading}</h2>
-        ${t.findings.length === 0 ? P`<p class="muted">${e.noFindings}</p>` : P`<ul class="findings">
-              ${t.findings.map((e) => this._renderFinding(e))}
-            </ul>`}
+        <h2>${e.findingsHeading}${t.findings.length > 0 ? P` <span class="count">${t.findings.length}</span>` : L}</h2>
+        ${this._renderFindings(t)}
       </section>
-      <section class="card">${this._renderDecision(t)}</section>
+      ${this._renderDecision(t)}
     ` : P`
-        <section class="card">
+        <section class="card empty">
+          ${W("mdi:file-document-outline")}
           <p class="muted">${e.noProposal}</p>
-          <button type="button" class="secondary" @click=${() => W(this, "goto-request")}>
-            ${e.toRequest}
+          <button type="button" class="secondary" @click=${() => U(this, "goto-request")}>
+            ${W("mdi:arrow-left")}${e.toRequest}
           </button>
         </section>
       `;
@@ -3520,30 +3641,33 @@ var Qt = ["description", "yaml"], $t = class extends B {
 		let t = this.t, n = (e) => new Intl.DateTimeFormat(this.language, {
 			dateStyle: "medium",
 			timeStyle: "short"
-		}).format(new Date(e));
+		}).format(new Date(e)), r = (e.operations.length === 1 ? e.operations[0] : void 0)?.after?.alias;
 		return P`
       <div class="head">
-        <h2>${t.proposalHeading}</h2>
-        <span class="badge ${e.status}">${Ge(t, e.status)}</span>
+        <h2 class="headline">${typeof r == "string" && r ? r : t.proposalHeading}</h2>
+        ${vt(t, e.status)}
       </div>
-      <p class="request">“${e.request}”</p>
-      <dl class="facts small">
-        <dt>${t.metaModel}</dt>
-        <dd>${e.model ?? t.modelUnknown}</dd>
-        <dt>${t.metaRounds}</dt>
-        <dd>${e.rounds}</dd>
-        <dt>${t.metaCreated}</dt>
-        <dd>${n(e.created)}</dd>
-        ${e.decided ? P`<dt>${t.metaDecided}</dt><dd>${n(e.decided)}</dd>` : L}
+      <p class="request">${W("mdi:format-quote-open")}<span>${e.request}</span></p>
+      <dl class="meta">
+        <div><dt>${t.metaModel}</dt><dd>${e.model ?? t.modelUnknown}</dd></div>
+        <div><dt>${t.metaRounds}</dt><dd>${e.rounds}</dd></div>
+        <div><dt>${t.metaCreated}</dt><dd>${n(e.created)}</dd></div>
+        ${e.decided ? P`<div><dt>${t.metaDecided}</dt><dd>${n(e.decided)}</dd></div>` : L}
       </dl>
     `;
 	}
 	_renderStatusNote(e) {
 		let t = this.t, n = e.findings.filter((e) => e.severity === "error").length;
-		return e.status === "failed" ? P`<div class="callout error" role="note">
-        <strong>${t.failedTitle}</strong>
-        <p>${t.failedText(e.rounds, n)}</p>
-      </div>` : e.status === "draft" ? P`<div class="callout warning" role="note"><p>${t.draftNote}</p></div>` : L;
+		return e.status === "failed" ? P`<div class="alert error" role="note">
+        ${W("mdi:alert-circle")}
+        <div class="alert-body">
+          <strong>${t.failedTitle}</strong>
+          <p>${t.failedText(e.rounds, n)}</p>
+        </div>
+      </div>` : e.status === "draft" ? P`<div class="alert warning" role="note">
+        ${W("mdi:alert")}
+        <div class="alert-body"><p>${t.draftNote}</p></div>
+      </div>` : L;
 	}
 	_renderBody(e) {
 		let t = this.t, n = {
@@ -3552,11 +3676,11 @@ var Qt = ["description", "yaml"], $t = class extends B {
 		};
 		return P`
       <div class="segmented" role="group" aria-label=${t.partsLabel}>
-        ${Qt.map((e) => P`<button
+        ${nn.map((e) => P`<button
             type="button"
             class=${this.section === e ? "on" : ""}
             aria-pressed=${this.section === e ? "true" : "false"}
-            @click=${() => W(this, "set-part", { part: e })}
+            @click=${() => U(this, "set-part", { part: e })}
           >
             ${n[e]}
           </button>`)}
@@ -3566,7 +3690,7 @@ var Qt = ["description", "yaml"], $t = class extends B {
 	}
 	_renderDescription(e, t, n) {
 		let r = this.t;
-		if (e.kind !== "automation" || e.op !== "create" || !e.after) return P`<div class="op">
+		if (this._names = [], e.kind !== "automation" || e.op !== "create" || !e.after) return P`<div class="op">
         ${this._renderItem({
 			text: r.operationOther(e.op, e.kind),
 			fragments: [{
@@ -3575,18 +3699,23 @@ var Qt = ["description", "yaml"], $t = class extends B {
 			}]
 		})}
       </div>`;
-		let i = Yt(e.after, {
+		let i = $t(e.after, {
 			t: r,
 			language: this.language,
-			nameOf: this.nameOf ?? ((e) => e)
+			nameOf: (e) => {
+				let t = (this.nameOf ?? ((e) => e))(e);
+				return this._names.push(t), t;
+			}
 		});
 		return P`<div class="op">
-      <h3>${this._heading(i, t, n)}</h3>
+      ${n > 1 ? P`<h3>${this._heading(i, t, n)}</h3>` : L}
       ${i.description ? P`<p class="muted desc">${i.description}</p>` : L}
-      ${this._renderGroup(r.triggersHeading, i.triggers)}
-      ${this._renderGroup(r.conditionsHeading, i.conditions)}
-      ${this._renderGroup(r.actionsHeading, i.actions, !0)}
-      ${i.mode ? P`<p class="mode"><span class="muted">${r.modeLabel}:</span> ${this._modeText(i.mode)}</p>` : L}
+      <ol class="flow">
+        ${this._renderStep("trigger", r.triggersHeading, "mdi:flash-outline", i.triggers)}
+        ${this._renderStep("condition", r.conditionsHeading, "mdi:filter-outline", i.conditions)}
+        ${this._renderStep("action", r.actionsHeading, "mdi:play-circle-outline", i.actions, !0)}
+      </ol>
+      ${i.mode ? P`<p class="mode">${W("mdi:repeat")}<span><span class="muted">${r.modeLabel}:</span> ${this._modeText(i.mode)}</span></p>` : L}
       ${i.other.length > 0 ? P`<h4>${r.otherFieldsHeading}</h4>${i.other.map((e) => this._renderFragment(e))}` : L}
     </div>`;
 	}
@@ -3598,15 +3727,26 @@ var Qt = ["description", "yaml"], $t = class extends B {
 		let t = this.t;
 		return e === "restart" ? t.modeRestart : e === "single" ? t.modeSingle : e;
 	}
-	_renderGroup(e, t, n = !1) {
-		let r = this.t;
+	_renderStep(e, t, n, r, i = !1) {
+		let a = this.t;
 		return P`
-      <h4>${e}</h4>
-      ${t.length === 0 ? P`<p class="muted none">${r.none}</p>` : n ? P`<ol class="items">${t.map((e) => P`<li>${this._renderItem(e)}</li>`)}</ol>` : P`<ul class="items">${t.map((e) => P`<li>${this._renderItem(e)}</li>`)}</ul>`}
+      <li class="step ${e}">
+        <span class="rail">${W(n)}</span>
+        <div class="step-body">
+          <h4>${t}</h4>
+          ${r.length === 0 ? P`<p class="muted none">${a.none}</p>` : P`<ul class="items ${i ? "numbered" : ""}">
+                ${r.map((e) => P`<li>${this._renderItem(e)}</li>`)}
+              </ul>`}
+        </div>
+      </li>
     `;
 	}
+	_rich(e) {
+		let t = [...new Set(this._names)].filter((e) => e.length > 1).sort((e, t) => t.length - e.length), n = [...t.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "[„“”][^„“”]+[“”]"], r = RegExp(`(${n.join("|")})`, "g");
+		return e.split(r).map((e, n) => n % 2 == 0 || e === "" ? e : t.includes(e) ? P`<span class="entity">${e}</span>` : P`<span class="state-value">${e}</span>`);
+	}
 	_renderItem(e) {
-		return P`<span class="item-text">${e.text}</span>${e.fragments.map((e) => this._renderFragment(e))}`;
+		return P`<span class="item-text">${this._rich(e.text)}</span>${e.fragments.map((e) => this._renderFragment(e))}`;
 	}
 	_renderFragment(e) {
 		return P`<div class="fragment">
@@ -3615,36 +3755,75 @@ var Qt = ["description", "yaml"], $t = class extends B {
     </div>`;
 	}
 	_renderYaml(e) {
+		let t = this.t;
 		return P`
-      <p class="muted note">${this.t.yamlNote}</p>
-      ${e.operations.map((e) => P`<pre class="yaml diff" tabindex="0">${Zt(e).map((e) => this._renderLine(e))}</pre>`)}
+      <p class="muted note">${t.yamlNote}</p>
+      ${e.operations.map((e, n) => {
+			let r = tn(e), i = this._copied === n;
+			return P`<div class="code">
+          <div class="code-bar">
+            <span class="code-label">${W("mdi:code-braces")}${t.partYaml}</span>
+            <button type="button" class="secondary small" @click=${() => void this._copy(r, n)}>
+              ${W(i ? "mdi:check" : "mdi:content-copy")}${i ? t.copiedYaml : t.copyYaml}
+            </button>
+          </div>
+          <pre class="yaml diff" tabindex="0">${r.map((e) => this._renderLine(e))}</pre>
+        </div>`;
+		})}
+      <span class="visually-hidden" role="status">${this._copied === null ? "" : t.copiedYaml}</span>
     `;
+	}
+	async _copy(e, t) {
+		try {
+			await navigator.clipboard.writeText(e.map((e) => e.text).join("\n"));
+		} catch {
+			return;
+		}
+		this._copied = t, clearTimeout(this._copyTimer), this._copyTimer = setTimeout(() => this._copied = null, 2e3);
+	}
+	disconnectedCallback() {
+		clearTimeout(this._copyTimer), super.disconnectedCallback();
 	}
 	_renderLine(e) {
 		return P`<span class="dl ${e.kind}">${e.text}</span>`;
 	}
+	_renderFindings(e) {
+		let t = this.t;
+		return e.findings.length === 0 ? e.status === "draft" || e.status === "failed" ? P`<p class="muted">${t.noFindings}</p>` : P`<div class="alert success no-findings" role="status">
+        ${W("mdi:check-circle")}
+        <div class="alert-body">
+          <strong>${t.noFindings}</strong>
+          <p>${t.noFindingsDetail}</p>
+        </div>
+      </div>` : P`<ul class="findings">
+      ${e.findings.map((e) => this._renderFinding(e))}
+    </ul>`;
+	}
 	_renderFinding(e) {
 		let t = this.t, n = e.severity === "error" ? t.severityError : e.severity === "warning" ? t.severityWarning : t.severityInfo;
 		return P`
-      <li class="finding">
-        <div class="line">
-          <span class="badge ${e.severity}">${n}</span>
-          <code class="check">${e.check}</code>
+      <li class="alert ${e.severity === "error" ? "error" : e.severity === "warning" ? "warning" : "info"} finding">
+        ${W(_t(e.severity))}
+        <div class="alert-body">
+          <div class="line">
+            <strong class="severity">${n}</strong>
+            <code class="check">${e.check}</code>
+          </div>
+          <p>${e.message}</p>
+          ${e.path ? P`<p class="path muted">${t.pathLabel}: <code>${e.path}</code></p>` : L}
+          ${e.net_refs.length > 0 ? P`<button
+                type="button"
+                class="secondary small"
+                @click=${() => U(this, "show-finding", { netRefs: e.net_refs })}
+              >
+                ${W("mdi:graph-outline")}${t.showInDomain}
+              </button>` : L}
         </div>
-        <p>${e.message}</p>
-        ${e.path ? P`<p class="path muted">${t.pathLabel}: <code>${e.path}</code></p>` : L}
-        ${e.net_refs.length > 0 ? P`<button
-              type="button"
-              class="secondary"
-              @click=${() => W(this, "show-finding", { netRefs: e.net_refs })}
-            >
-              ${t.showInDomain}
-            </button>` : L}
       </li>
     `;
 	}
 	_renderDecision(e) {
-		let t = this.t, n = St(e.status), r = this.pending !== null, i = {
+		let t = this.t, n = Et(e.status), r = this.pending !== null, i = {
 			apply: [t.apply, t.applying],
 			discard: [t.discard, t.discarding],
 			revert: [t.revert, t.reverting]
@@ -3652,130 +3831,248 @@ var Qt = ["description", "yaml"], $t = class extends B {
 			apply: "",
 			discard: "danger",
 			revert: "secondary"
-		}, o = e.operations.flatMap((e) => e.target_id ? [e.target_id] : []), s = {
+		}, o = {
+			apply: "mdi:check",
+			discard: "mdi:delete-outline",
+			revert: "mdi:undo-variant"
+		}, s = e.operations.flatMap((e) => e.target_id ? [e.target_id] : []), c = {
 			applied: t.stateApplied,
 			reverted: t.stateReverted,
 			discarded: t.stateDiscarded
-		};
+		}, l = n.length > 0 || e.status === "reverted" || e.status === "discarded";
 		return P`
-      <h2>${t.decisionHeading}</h2>
-      <div class="actions">
-        ${n.map((e) => P`<button
-            type="button"
-            class=${a[e]}
-            ?disabled=${r}
-            aria-busy=${this.pending === e ? "true" : "false"}
-            @click=${() => W(this, "decide", { decision: e })}
-          >
-            ${this.pending === e ? i[e][1] : i[e][0]}
-          </button>`)}
-        ${e.status === "reverted" || e.status === "discarded" ? P`<button type="button" class="secondary" @click=${() => W(this, "goto-request")}>
-              ${t.toRequest}
-            </button>` : L}
-      </div>
-      ${n.includes("apply") ? P`<p class="muted note">${t.applyEffect}</p>` : L}
-      ${n.includes("revert") ? P`<p class="muted note">${t.revertEffect}</p>` : L}
-      ${s[e.status] ? P`<p class="state" role="status">${s[e.status]}</p>` : L}
-      ${e.status === "applied" && o.length > 0 ? P`<ul class="created">
-            ${o.map((e) => P`<li>
-                <span class="muted">${t.createdAutomation} (${t.automationId}):</span>
-                <code>${e}</code>
-                <a href="/config/automation/edit/${encodeURIComponent(e)}">${t.openInEditor}</a>
-              </li>`)}
-          </ul>` : L}
-      ${this.error ? gt(t, this.error) : L}
+      <section class="card decision ${n.includes("apply") ? "sticky" : ""}">
+        <h2 class="visually-hidden">${t.decisionHeading}</h2>
+        ${c[e.status] ? P`<p class="state" role="status">${W("mdi:information-outline")}<span>${c[e.status]}</span></p>` : L}
+        ${e.status === "applied" && s.length > 0 ? P`<ul class="created">
+              ${s.map((e) => P`<li>
+                  <span class="muted">${t.createdAutomation} (${t.automationId}):</span>
+                  <code>${e}</code>
+                  <a href="/config/automation/edit/${encodeURIComponent(e)}">${t.openInEditor}</a>
+                </li>`)}
+            </ul>` : L}
+        ${l ? P`<div class="decide">
+              <div class="actions">
+                ${n.map((e) => P`<button
+                    type="button"
+                    class="${a[e]} ${e === "apply" ? "primary-action" : ""}"
+                    ?disabled=${r}
+                    aria-busy=${this.pending === e ? "true" : "false"}
+                    @click=${() => U(this, "decide", { decision: e })}
+                  >
+                    ${W(o[e])}${this.pending === e ? i[e][1] : i[e][0]}
+                  </button>`)}
+                ${e.status === "reverted" || e.status === "discarded" ? P`<button type="button" class="secondary" @click=${() => U(this, "goto-request")}>
+                      ${W("mdi:arrow-left")}${t.toRequest}
+                    </button>` : L}
+              </div>
+              ${n.includes("apply") ? P`<p class="effect muted">${t.applyEffect}</p>` : L}
+              ${n.includes("revert") ? P`<p class="effect muted">${t.revertEffect}</p>` : L}
+            </div>` : L}
+        ${this.error ? bt(t, this.error) : L}
+      </section>
     `;
 	}
 	static {
-		this.styles = [_t, o`
+		this.styles = [xt, o`
+      .empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding-block: 32px;
+        text-align: center;
+      }
+      .empty ha-icon {
+        --mdc-icon-size: 40px;
+        color: var(--secondary-text-color);
+      }
+      .empty p {
+        margin: 0;
+      }
       .head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        flex-wrap: wrap;
+        gap: 8px 12px;
       }
-      .head h2 {
+      .headline {
+        flex: 1 1 auto;
+        min-width: 0;
         margin: 0;
-      }
-      .request {
-        margin: 8px 0 16px;
-        font-style: italic;
+        font-size: 22px;
+        font-weight: 500;
+        line-height: 1.25;
         overflow-wrap: anywhere;
       }
-      dl.small {
-        font-size: 14px;
+      .request {
+        display: flex;
+        gap: 6px;
+        margin: 8px 0 14px;
+        color: var(--secondary-text-color);
+        overflow-wrap: anywhere;
       }
-      .callout {
-        margin: 0 0 16px;
-        padding: 12px 16px;
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
+      .request ha-icon {
+        --mdc-icon-size: 18px;
+        margin-top: 2px;
       }
-      .callout p {
-        margin: 4px 0 0;
+      dl.meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 24px;
+        margin: 0;
+        font-size: 13px;
       }
-      .callout.error {
-        color: var(--primary-text-color);
-        border-color: var(--error-color);
-        border-width: 2px;
+      dl.meta div {
+        display: flex;
+        gap: 6px;
       }
-      .callout.error strong {
-        color: var(--error-color);
+      dl.meta dt {
+        color: var(--secondary-text-color);
       }
-      .callout.warning {
-        border-color: var(--warning-color);
+      dl.meta dd {
+        margin: 0;
+      }
+      .alert {
+        margin-top: 16px;
+      }
+      .count {
+        display: inline-block;
+        min-width: 20px;
+        padding: 0 6px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 20px;
+        text-align: center;
+        vertical-align: 2px;
+        background-color: var(--secondary-background-color);
+        border-radius: 10px;
       }
       .segmented {
-        display: inline-flex;
-        margin-bottom: 16px;
-        border: 1px solid var(--primary-color);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      .segmented button {
-        color: var(--primary-color);
-        background: transparent;
-        border: none;
-        border-radius: 0;
-      }
-      .segmented button.on {
-        color: var(--text-primary-color);
-        background-color: var(--primary-color);
+        margin-bottom: 20px;
       }
       h4 {
-        margin: 16px 0 6px;
-        font-size: 13px;
+        margin: 0 0 4px;
+        font-size: 12px;
         font-weight: 500;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--secondary-text-color);
       }
       .op + .op {
         margin-top: 24px;
-        padding-top: 16px;
+        padding-top: 20px;
         border-top: 1px solid var(--divider-color);
       }
       .op h3 {
-        margin: 0;
+        margin: 0 0 4px;
       }
       .desc {
-        margin: 4px 0 0;
+        margin: 0 0 16px;
+      }
+      /* The flow: trigger, conditions, actions, connected by a line. */
+      .flow {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .step {
+        position: relative;
+        display: flex;
+        gap: 14px;
+        padding-bottom: 20px;
+      }
+      .step:last-child {
+        padding-bottom: 0;
+      }
+      .step:not(:last-child)::before {
+        position: absolute;
+        top: 36px;
+        bottom: 4px;
+        left: 17px;
+        width: 2px;
+        content: "";
+        background-color: var(--divider-color);
+      }
+      .rail {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        color: var(--primary-color);
+        background-color: color-mix(in srgb, var(--primary-color) 14%, var(--card-background-color));
+        border: 1px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
+        border-radius: 50%;
+      }
+      .step-body {
+        flex: 1;
+        min-width: 0;
+        padding-top: 6px;
       }
       .items {
         margin: 0;
-        padding-left: 24px;
+        padding: 0;
+        list-style: none;
+        font-size: 15px;
       }
       .items li + li {
-        margin-top: 6px;
+        margin-top: 8px;
+      }
+      .items.numbered {
+        counter-reset: n;
+      }
+      .items.numbered li {
+        position: relative;
+        padding-inline-start: 28px;
+        counter-increment: n;
+      }
+      .items.numbered li::before {
+        position: absolute;
+        top: 2px;
+        left: 0;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 20px;
+        text-align: center;
+        content: counter(n);
+        color: var(--secondary-text-color);
+        border: 1px solid var(--divider-color);
+        border-radius: 50%;
       }
       .item-text {
         overflow-wrap: anywhere;
+      }
+      .entity {
+        display: inline-block;
+        padding: 0 8px;
+        font-weight: 500;
+        line-height: 1.55;
+        background-color: color-mix(in srgb, var(--primary-color) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-color) 35%, transparent);
+        border-radius: 6px;
+      }
+      .state-value {
+        font-weight: 500;
       }
       .none {
         margin: 0;
       }
       .mode {
-        margin: 16px 0 0;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 20px 0 0;
+        padding-top: 14px;
+        font-size: 13px;
+        border-top: 1px solid var(--divider-color);
+      }
+      .mode ha-icon {
+        --mdc-icon-size: 18px;
+        color: var(--secondary-text-color);
       }
       .fragment {
         margin: 6px 0;
@@ -3791,29 +4088,34 @@ var Qt = ["description", "yaml"], $t = class extends B {
         list-style: none;
       }
       .finding {
-        padding: 12px 0;
-        border-top: 1px solid var(--divider-color);
-      }
-      .finding:first-child {
-        padding-top: 0;
-        border-top: none;
+        margin: 0 0 8px;
       }
       .finding:last-child {
-        padding-bottom: 0;
+        margin-bottom: 0;
+      }
+      .no-findings {
+        margin-top: 0;
+      }
+      .no-findings p {
+        margin: 0;
+        color: var(--secondary-text-color);
       }
       .finding p {
+        margin-bottom: 4px;
         overflow-wrap: anywhere;
       }
       .finding .path {
-        margin: 0;
         font-size: 13px;
+      }
+      .finding button {
+        margin-top: 6px;
       }
       .line {
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
-        gap: 4px 10px;
-        margin-bottom: 6px;
+        align-items: baseline;
+        gap: 2px 10px;
+        margin-bottom: 2px;
       }
       .check {
         font-size: 12px;
@@ -3821,55 +4123,133 @@ var Qt = ["description", "yaml"], $t = class extends B {
         overflow-wrap: anywhere;
       }
       .note {
-        margin: 8px 0 0;
+        margin: 0 0 12px;
         font-size: 13px;
       }
+      button.small {
+        min-height: 32px;
+        padding: 0 14px;
+        font-size: 13px;
+      }
+      .code {
+        overflow: hidden;
+        background-color: var(--secondary-background-color);
+        border: 1px solid var(--divider-color);
+        border-radius: 10px;
+      }
+      .code + .code {
+        margin-top: 12px;
+      }
+      .code-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 8px 6px 14px;
+        border-bottom: 1px solid var(--divider-color);
+      }
+      .code-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        color: var(--secondary-text-color);
+      }
+      .code-label ha-icon {
+        --mdc-icon-size: 16px;
+      }
       .yaml {
-        margin: 4px 0 0;
+        margin: 0;
         padding: 12px;
         overflow-x: auto;
         font-family: var(--code-font-family, monospace);
         font-size: 13px;
-        line-height: 1.45;
+        line-height: 1.55;
         color: var(--primary-text-color);
         background-color: var(--secondary-background-color);
         border-radius: 8px;
       }
+      .fragment .yaml {
+        margin-top: 4px;
+        border: 1px solid var(--divider-color);
+      }
       .yaml.diff {
-        padding: 12px 0;
-        margin-top: 12px;
+        padding: 0;
+        border-radius: 0;
+      }
+      .dl:first-child {
+        padding-top: 10px;
+      }
+      .dl:last-child {
+        padding-bottom: 10px;
       }
       .dl {
         display: block;
-        padding: 0 12px 0 28px;
         position: relative;
+        padding: 0 14px 0 32px;
         white-space: pre;
       }
       .dl::before {
         position: absolute;
-        left: 10px;
+        left: 12px;
         content: " ";
         color: var(--secondary-text-color);
       }
       .dl.add {
-        background-color: color-mix(in srgb, var(--success-color, var(--primary-color)) 18%, transparent);
+        background-color: color-mix(in srgb, var(--success-color, var(--primary-color)) 14%, transparent);
       }
       .dl.add::before {
         content: "+";
         color: var(--success-color, var(--primary-color));
       }
       .dl.remove {
-        background-color: color-mix(in srgb, var(--error-color) 18%, transparent);
+        background-color: color-mix(in srgb, var(--error-color) 14%, transparent);
       }
       .dl.remove::before {
         content: "-";
         color: var(--error-color);
       }
+      /* The decision stays in view while the proposal is read. */
+      .decision {
+        margin-bottom: 0;
+      }
+      .decision.sticky {
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        border-bottom-width: 0;
+        border-radius: var(--ha-card-border-radius, 12px) var(--ha-card-border-radius, 12px) 0 0;
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+      }
+      .decide {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 20px;
+      }
+      .decision button.primary-action {
+        min-height: 44px;
+        padding-inline: 28px;
+        font-size: 15px;
+      }
+      .decision .actions button {
+        min-height: 44px;
+      }
+      .effect {
+        flex: 1 1 240px;
+        margin: 0;
+        font-size: 13px;
+      }
       .state {
-        margin: 12px 0 0;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        margin: 0 0 14px;
       }
       .created {
-        margin: 8px 0 0;
+        margin: -6px 0 14px;
         padding: 0;
         list-style: none;
       }
@@ -3885,12 +4265,23 @@ var Qt = ["description", "yaml"], $t = class extends B {
       .created code {
         overflow-wrap: anywhere;
       }
+      @media (max-width: 480px) {
+        .headline {
+          font-size: 20px;
+        }
+        .decision.sticky {
+          position: static;
+          border-bottom-width: var(--ha-card-border-width, 1px);
+          border-radius: var(--ha-card-border-radius, 12px);
+          box-shadow: none;
+        }
+      }
     `];
 	}
 };
-customElements.define("ai-drafts-proposal", $t);
+customElements.define("ai-drafts-proposal", rn);
 // src/views/request.ts
-var en = class extends B {
+var an = class extends B {
 	static {
 		this.properties = {
 			t: { attribute: !1 },
@@ -3915,61 +4306,63 @@ var en = class extends B {
 	render() {
 		let e = this.t, t = this._text.trim() !== "" && !this.drafting;
 		return P`
-      ${this._renderInfo()}
-      <section class="card">
+      <section class="card compose ${this.drafting ? "busy" : ""}" aria-busy=${this.drafting ? "true" : "false"}>
+        ${this.drafting ? P`<div class="progress" aria-hidden="true"><span></span></div>` : L}
         <h2>${e.requestHeading}</h2>
-        <div class="fields">
-          <div class="field request-field">
-            <label for="request">${e.requestLabel}</label>
-            <textarea
-              id="request"
-              rows="3"
-              maxlength="4000"
-              .value=${this._text}
-              ?readonly=${this.drafting}
-              placeholder=${e.requestPlaceholder}
-              @input=${(e) => {
+        <div class="request-field">
+          <label for="request">${e.requestLabel}</label>
+          <textarea
+            id="request"
+            rows="5"
+            maxlength="4000"
+            .value=${this._text}
+            ?readonly=${this.drafting}
+            placeholder=${e.requestPlaceholder}
+            @input=${(e) => {
 			this._text = e.target.value;
 		}}
-            ></textarea>
-          </div>
-          ${this._renderModelField()}
+          ></textarea>
         </div>
-        ${this._renderModelNote()}
         <div class="suggestion">
           <button
-            class="secondary"
+            class="secondary small"
             type="button"
             ?disabled=${this.drafting}
             @click=${() => {
 			this._text = this.exampleRequest;
 		}}
           >
-            ${e.useExample}
+            ${W("mdi:lightbulb-on-outline")}${e.useExample}
           </button>
           <span class="muted example">“${this.exampleRequest}”</span>
         </div>
-        <div class="actions">
+        <div class="controls">
+          ${this._renderModelField()}
           <button
+            class="send"
             type="button"
             ?disabled=${!t}
-            aria-busy=${this.drafting ? "true" : "false"}
-            @click=${() => W(this, "create-draft", {
+            @click=${() => U(this, "create-draft", {
 			request: this._text.trim(),
 			model: this._modelToSend()
 		})}
           >
-            ${this.drafting ? P`<span class="spinner" aria-hidden="true"></span>` : L}
+            ${this.drafting ? P`<span class="spinner" aria-hidden="true"></span>` : W("mdi:creation-outline")}
             ${this.drafting ? e.drafting : e.createDraft}
           </button>
         </div>
-        ${this.drafting ? P`<p class="muted note" role="status">${e.draftingNote}</p>` : L}
-        ${this.error ? gt(e, this.error) : L}
+        ${this._renderModelNote()}
+        ${this.drafting ? P`<div class="alert info" role="status">
+              ${W("mdi:timer-sand")}
+              <div class="alert-body"><p>${e.draftingNote}</p></div>
+            </div>` : L}
+        ${this.error ? bt(e, this.error) : L}
       </section>
       <section class="card">
         <h2>${e.historyHeading}</h2>
         ${this._renderHistory()}
       </section>
+      ${this._renderInfo()}
     `;
 	}
 	_modelChoices() {
@@ -4029,10 +4422,13 @@ var en = class extends B {
 		let e = this.t, t = this.info;
 		if (t.status === "loading") return P`<p class="muted">${e.loading}</p>`;
 		if (t.status === "error") return P`
-        <div class="error" role="alert">
-          <p>${e.error}</p>
-          <p class="detail">${t.message}</p>
-          <button type="button" @click=${() => W(this, "retry-info")}>${e.retry}</button>
+        <div class="alert error" role="alert">
+          ${W("mdi:alert-circle")}
+          <div class="alert-body">
+            <p>${e.error}</p>
+            <p class="detail">${t.message}</p>
+            <button type="button" class="secondary" @click=${() => U(this, "retry-info")}>${e.retry}</button>
+          </div>
         </div>
       `;
 		let { info: n } = t, r = n.model_source === "ai_task" ? e.sourceAiTask : n.model_source === "openai_compatible" ? e.sourceOpenai : "–", i = n.model ?? (n.model_source === "ai_task" ? e.preferredAiTask : "–");
@@ -4048,19 +4444,26 @@ var en = class extends B {
 		let e = this.t, t = this.history;
 		if (t.status === "loading") return P`<p class="muted">${e.historyLoading}</p>`;
 		if (t.status === "error") return P`
-        <div class="error" role="alert">
-          <p>${e.historyError}</p>
-          <p class="detail">${t.message}</p>
-          <button type="button" @click=${() => W(this, "retry-history")}>${e.retry}</button>
+        <div class="alert error" role="alert">
+          ${W("mdi:alert-circle")}
+          <div class="alert-body">
+            <p>${e.historyError}</p>
+            <p class="detail">${t.message}</p>
+            <button type="button" class="secondary" @click=${() => U(this, "retry-history")}>${e.retry}</button>
+          </div>
         </div>
       `;
-		if (t.items.length === 0) return P`<p class="muted">${e.historyEmpty}</p>`;
+		if (t.items.length === 0) return P`<div class="empty">
+        ${W("mdi:history")}
+        <p>${e.historyEmpty}</p>
+        <p class="muted">${e.historyEmptyHint}</p>
+      </div>`;
 		let n = new Intl.DateTimeFormat(this.language, {
 			dateStyle: "medium",
 			timeStyle: "short"
 		});
 		return P`
-      <p class="muted note">${e.historyOpenHint}</p>
+      <p class="muted note hint">${e.historyOpenHint}</p>
       <ul class="history">
         ${t.items.map((t) => {
 			let r = t.findings.find((e) => e.severity === "error"), i = t.id === this.currentId;
@@ -4068,19 +4471,24 @@ var en = class extends B {
             <li>
               <button
                 type="button"
-                class="entry ${i ? "current" : ""}"
+                class="entry ${t.status} ${i ? "current" : ""}"
                 aria-current=${i ? "true" : "false"}
-                @click=${() => W(this, "open-changeset", { id: t.id })}
+                @click=${() => U(this, "open-changeset", { id: t.id })}
               >
-                <span class="line">
-                  <span class="badge ${t.status}">${Ge(e, t.status)}</span>
-                  <span class="when muted">${n.format(new Date(t.created))}</span>
-                  ${t.rounds > 0 ? P`<span class="muted">${e.roundsLabel(t.rounds)}</span>` : L}
-                  ${t.model ? P`<span class="muted model">${e.historyModel}: ${t.model}</span>` : L}
-                  ${i ? P`<span class="muted open">${e.currentBadge}</span>` : L}
+                <span class="lead">${W(gt(t.status))}</span>
+                <span class="main">
+                  <span class="text">${t.request}</span>
+                  <span class="meta muted">
+                    <span>${n.format(new Date(t.created))}</span>
+                    ${t.model ? P`<span>${e.historyModel}: ${t.model}</span>` : L}
+                    ${t.rounds > 0 ? P`<span>${e.roundsLabel(t.rounds)}</span>` : L}
+                  </span>
+                  ${t.status === "failed" && r ? P`<span class="finding-text">${r.message}</span>` : L}
                 </span>
-                <span class="text">${t.request}</span>
-                ${t.status === "failed" && r ? P`<span class="finding-text">${r.message}</span>` : L}
+                <span class="side">
+                  ${vt(e, t.status)}
+                  ${i ? P`<span class="open">${e.currentBadge}</span>` : L}
+                </span>
               </button>
             </li>
           `;
@@ -4089,38 +4497,99 @@ var en = class extends B {
     `;
 	}
 	static {
-		this.styles = [_t, o`
+		this.styles = [xt, o`
       label {
         display: block;
         margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 500;
         color: var(--secondary-text-color);
       }
-      .fields {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px 16px;
-      }
-      .field {
-        min-width: 0;
+      .compose {
+        position: relative;
+        overflow: hidden;
       }
       .request-field {
-        flex: 3 1 280px;
+        min-width: 0;
       }
-      .model-field {
-        flex: 1 1 200px;
-      }
+      textarea,
       select {
         box-sizing: border-box;
         width: 100%;
-        padding: 8px 12px;
         font: inherit;
         color: var(--primary-text-color);
-        background-color: var(--secondary-background-color);
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
+        background-color: var(--input-fill-color, var(--secondary-background-color));
+        border: 1px solid var(--outline-color, var(--divider-color));
+        border-radius: 10px;
       }
-      select:disabled {
-        opacity: 0.6;
+      textarea {
+        min-height: 128px;
+        padding: 14px 16px;
+        font-size: 16px;
+        line-height: 1.5;
+        resize: vertical;
+      }
+      textarea::placeholder {
+        color: var(--secondary-text-color);
+        opacity: 0.8;
+      }
+      textarea:focus {
+        border-color: var(--primary-color);
+      }
+      select {
+        min-height: 40px;
+        padding: 0 12px;
+      }
+      select:disabled,
+      textarea[readonly] {
+        opacity: 0.65;
+      }
+      .suggestion {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        margin: 12px 0 0;
+      }
+      button.small {
+        min-height: 32px;
+        padding: 0 14px;
+        font-size: 13px;
+      }
+      .example {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px 16px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--divider-color);
+      }
+      .model-field {
+        flex: 0 1 300px;
+        min-width: 0;
+      }
+      .model-field label {
+        font-weight: 400;
+        font-size: 12px;
+      }
+      button.send {
+        min-width: 180px;
+        min-height: 44px;
+        font-size: 15px;
+      }
+      @media (max-width: 480px) {
+        .model-field {
+          flex-basis: 100%;
+        }
+        button.send {
+          width: 100%;
+        }
       }
       .unavailable {
         padding-inline-start: 8px;
@@ -4130,48 +4599,29 @@ var en = class extends B {
       .loading-models {
         margin: 0;
       }
-      textarea {
-        box-sizing: border-box;
-        width: 100%;
-        padding: 8px 12px;
-        font: inherit;
-        color: var(--primary-text-color);
-        background-color: var(--secondary-background-color);
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
-        resize: vertical;
-      }
-      .suggestion {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px 12px;
-        margin: 8px 0 12px;
-      }
-      .example {
-        font-size: 14px;
-      }
       .note {
-        margin: 12px 0 0;
-        font-size: 13px;
+        margin: 8px 0 0;
+        font-size: 12px;
       }
       .info {
         display: flex;
         flex-wrap: wrap;
         gap: 2px 16px;
-        margin: 0 0 16px;
-        font-size: 13px;
+        margin: 0;
+        padding: 0 4px;
+        font-size: 12px;
       }
-      .detail {
-        color: var(--secondary-text-color);
+      .alert {
+        margin-top: 16px;
+      }
+      .alert button {
+        min-height: 32px;
       }
       .spinner {
         display: inline-block;
         box-sizing: border-box;
-        width: 14px;
-        height: 14px;
-        margin-right: 8px;
-        vertical-align: -2px;
+        width: 16px;
+        height: 16px;
         border: 2px solid currentColor;
         border-right-color: transparent;
         border-radius: 50%;
@@ -4182,13 +4632,59 @@ var en = class extends B {
           transform: rotate(360deg);
         }
       }
-      @media (prefers-reduced-motion: reduce) {
-        .spinner {
-          animation-duration: 3s;
+      .progress {
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 3px;
+        background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+      }
+      .progress span {
+        display: block;
+        width: 35%;
+        height: 100%;
+        background-color: var(--primary-color);
+        animation: slide 1.6s ease-in-out infinite;
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(300%);
         }
       }
+      @media (prefers-reduced-motion: reduce) {
+        .spinner {
+          animation: none;
+          border-right-color: currentColor;
+          border-style: dotted;
+        }
+        .progress span {
+          width: 100%;
+          animation: none;
+          opacity: 0.6;
+        }
+      }
+      .empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 12px 12px;
+        text-align: center;
+      }
+      .empty ha-icon {
+        --mdc-icon-size: 40px;
+        margin-bottom: 8px;
+        color: var(--secondary-text-color);
+      }
+      .empty p {
+        margin: 0 0 4px;
+      }
+      .hint {
+        margin: -4px 0 12px;
+      }
       .history {
-        margin: 12px 0 0;
+        margin: 0;
         padding: 0;
         list-style: none;
       }
@@ -4196,39 +4692,103 @@ var en = class extends B {
         margin-top: 8px;
       }
       button.entry {
-        display: block;
-        box-sizing: border-box;
+        --status-color: var(--secondary-text-color);
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 12px;
         width: 100%;
-        padding: 10px 12px;
+        padding: 12px 14px;
+        font-weight: 400;
         text-align: start;
         color: var(--primary-text-color);
         background-color: transparent;
         border: 1px solid var(--divider-color);
+        border-radius: 10px;
       }
-      button.entry:hover {
+      button.entry:hover:not(:disabled) {
+        filter: none;
         background-color: var(--secondary-background-color);
       }
       button.entry.current {
+        background-color: color-mix(in srgb, var(--primary-color) 8%, transparent);
         border-color: var(--primary-color);
+        border-inline-start-width: 4px;
+        padding-inline-start: 11px;
       }
-      .line {
+      button.entry.checked {
+        --status-color: var(--primary-color);
+      }
+      button.entry.applied {
+        --status-color: var(--success-color, var(--primary-color));
+      }
+      button.entry.failed {
+        --status-color: var(--error-color);
+      }
+      button.entry.draft {
+        --status-color: var(--warning-color);
+      }
+      .lead {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 36px;
+        height: 36px;
+        color: var(--status-color);
+        background-color: color-mix(in srgb, var(--status-color) 14%, transparent);
+        border-radius: 50%;
+      }
+      .main {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px 12px;
-        margin-bottom: 4px;
-        font-size: 13px;
-      }
-      .open {
-        margin-left: auto;
+        flex: 1;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
       }
       .text {
-        display: block;
+        display: -webkit-box;
+        overflow: hidden;
+        font-size: 15px;
+        line-height: 1.35;
         overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 14px;
+        font-size: 12px;
+      }
+      .side {
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+      .open {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+      }
+      @media (max-width: 480px) {
+        button.entry {
+          flex-wrap: wrap;
+        }
+        .main {
+          flex-basis: calc(100% - 60px);
+        }
+        .side {
+          flex-direction: row-reverse;
+          align-items: center;
+          margin-inline-start: 48px;
+        }
       }
       .finding-text {
         display: block;
-        margin-top: 4px;
+        margin-top: 2px;
         font-size: 13px;
         color: var(--error-color);
         overflow-wrap: anywhere;
@@ -4236,30 +4796,35 @@ var en = class extends B {
     `];
 	}
 };
-customElements.define("ai-drafts-request", en);
+customElements.define("ai-drafts-request", an);
 // src/ai-drafts-panel.ts
-function tn() {
+function on() {
 	try {
 		return new URL(import.meta.url).searchParams.get("v") || null;
 	} catch {
 		return null;
 	}
 }
-var nn = tn(), rn = [
+var sn = on(), cn = [
 	"request",
 	"proposal",
 	"domain",
 	"inventory"
-], $ = Je(ze, Be), an = String(Ve.operations[0]?.after?.id ?? ""), on = new Map([...Re.map((e) => [e.id, e.alias]), [an, String(Ve.operations[0]?.after?.alias ?? "")]]), sn = Xe($), cn = sn.filter((e) => e.id !== an), ln = new Map($.places.map((e) => [e.id, e.label])), un = Ve.findings.flatMap((e) => e.net_refs), dn = sn.map((e) => ({
+], ln = {
+	request: "mdi:message-text-outline",
+	proposal: "mdi:clipboard-check-outline",
+	domain: "mdi:home-analytics",
+	inventory: "mdi:format-list-bulleted"
+}, $ = Ye(Be, Ve), un = String(He.operations[0]?.after?.id ?? ""), dn = new Map([...ze.map((e) => [e.id, e.alias]), [un, String(He.operations[0]?.after?.alias ?? "")]]), fn = Ze($), pn = fn.filter((e) => e.id !== un), mn = new Map($.places.map((e) => [e.id, e.label])), hn = He.findings.flatMap((e) => e.net_refs), gn = fn.map((e) => ({
 	info: e,
-	alias: on.get(e.id) ?? e.id,
-	isProposal: e.id === an
-})), fn = cn.map((e) => ({
+	alias: dn.get(e.id) ?? e.id,
+	isProposal: e.id === un
+})), _n = pn.map((e) => ({
 	id: e.id,
-	alias: on.get(e.id) ?? e.id,
+	alias: dn.get(e.id) ?? e.id,
 	mode: e.mode,
-	description: qe(e, Le)
-})), pn = Qe(cn), mn = class extends B {
+	description: Je(e, Re)
+})), vn = $e(pn), yn = class extends B {
 	static {
 		this.properties = {
 			hass: { attribute: !1 },
@@ -4287,7 +4852,7 @@ var nn = tn(), rn = [
 			if (!this._drafting) {
 				this._drafting = !0, this._draftError = null;
 				try {
-					let t = await Ae(this.hass, e.detail.request, e.detail.model);
+					let t = await je(this.hass, e.detail.request, e.detail.model);
 					this._open(t);
 				} catch (e) {
 					this._draftError = V(e);
@@ -4301,7 +4866,7 @@ var nn = tn(), rn = [
 			if (t && !this._pending) {
 				this._pending = e.detail.decision, this._decisionError = null;
 				try {
-					this._current = await je(this.hass, e.detail.decision, t.id, {
+					this._current = await Me(this.hass, e.detail.decision, t.id, {
 						decidedIn: this._part,
 						viewsOpened: this._viewsOpened
 					});
@@ -4320,11 +4885,11 @@ var nn = tn(), rn = [
 			let t = this._history.items.find((t) => t.id === e.detail.id);
 			t && this._open(t);
 		}, this._onShowFinding = (e) => {
-			this._marks = $e($, e.detail.netRefs), this._focus = null, this._go("domain");
+			this._marks = et($, e.detail.netRefs), this._focus = null, this._go("domain");
 		}, this._onFocusAutomation = (e) => {
 			let { automationId: t, toggle: n } = e.detail;
-			this._focus = n && this._focus === t ? null : t, n || (this._marks = et, this._go("domain"));
-		}, this._info = { status: "loading" }, this._latestHash = null, this._tab = "request", this._history = { status: "loading" }, this._models = { status: "loading" }, this._current = null, this._part = "description", this._drafting = !1, this._draftError = null, this._pending = null, this._decisionError = null, this._marks = et, this._focus = null, this._mode = "house";
+			this._focus = n && this._focus === t ? null : t, n || (this._marks = tt, this._go("domain"));
+		}, this._info = { status: "loading" }, this._latestHash = null, this._tab = "request", this._history = { status: "loading" }, this._models = { status: "loading" }, this._current = null, this._part = "description", this._drafting = !1, this._draftError = null, this._pending = null, this._decisionError = null, this._marks = tt, this._focus = null, this._mode = "house";
 	}
 	willUpdate(e) {
 		let t = e.get("hass");
@@ -4354,7 +4919,7 @@ var nn = tn(), rn = [
 	async _loadModels() {
 		let e = ++this._modelsSeq;
 		try {
-			let t = await ke(this.hass);
+			let t = await Ae(this.hass);
 			if (e !== this._modelsSeq) return;
 			this._models = {
 				status: "ready",
@@ -4371,7 +4936,7 @@ var nn = tn(), rn = [
 	async _loadHistory() {
 		let e = ++this._historySeq;
 		try {
-			let t = await Oe(this.hass);
+			let t = await ke(this.hass);
 			if (e !== this._historySeq) return;
 			if (this._history = {
 				status: "ready",
@@ -4403,10 +4968,10 @@ var nn = tn(), rn = [
 		this._viewsOpened.includes(e) || (this._viewsOpened = [...this._viewsOpened, e]);
 	}
 	_outdated() {
-		return nn !== null && this._latestHash !== null && this._latestHash !== nn;
+		return sn !== null && this._latestHash !== null && this._latestHash !== sn;
 	}
 	render() {
-		let e = We(this.hass?.locale?.language ?? this.hass?.language), t = this.hass?.locale?.language ?? this.hass?.language, n = {
+		let e = Ge(this.hass?.locale?.language ?? this.hass?.language), t = this.hass?.locale?.language ?? this.hass?.language, n = {
 			request: e.tabRequest,
 			proposal: e.tabProposal,
 			domain: e.tabDomain,
@@ -4427,7 +4992,7 @@ var nn = tn(), rn = [
             </button>
           </div>` : L}
       <div class="tabs" role="tablist">
-        ${rn.map((e) => P`<button
+        ${cn.map((e) => P`<button
             type="button"
             role="tab"
             id="tab-${e}"
@@ -4436,7 +5001,8 @@ var nn = tn(), rn = [
             class=${this._tab === e ? "active" : ""}
             @click=${() => this._go(e)}
           >
-            ${n[e]}
+            <ha-icon icon=${ln[e]}></ha-icon>
+            <span>${n[e]}</span>
           </button>`)}
       </div>
       <div
@@ -4449,9 +5015,9 @@ var nn = tn(), rn = [
         @retry-info=${() => void this._loadInfo()}
         @retry-history=${() => void this._loadHistory()}
         @show-finding=${this._onShowFinding}
-        @mark-example=${() => this._marks = $e($, un)}
+        @mark-example=${() => this._marks = et($, hn)}
         @focus-automation=${this._onFocusAutomation}
-        @clear-marks=${() => this._marks = et}
+        @clear-marks=${() => this._marks = tt}
         @clear-focus=${() => this._focus = null}
         @set-mode=${(e) => this._mode = e.detail.mode}
       >
@@ -4471,7 +5037,7 @@ var nn = tn(), rn = [
           .currentId=${this._current?.id ?? null}
           .drafting=${this._drafting}
           .error=${this._draftError}
-          .exampleRequest=${Ve.request}
+          .exampleRequest=${He.request}
         ></ai-drafts-request>
       </div>
       <div class="view" id="view-proposal" role="tabpanel" ?hidden=${this._tab !== "proposal"}>
@@ -4489,9 +5055,9 @@ var nn = tn(), rn = [
         <ai-drafts-domain
           .t=${e}
           .language=${t}
-          .house=${Le}
+          .house=${Re}
           .net=${$}
-          .automations=${dn}
+          .automations=${gn}
           .marks=${this._marks}
           .focusId=${this._focus}
           .mode=${this._mode}
@@ -4500,9 +5066,9 @@ var nn = tn(), rn = [
       <div class="view" id="view-inventory" role="tabpanel" ?hidden=${this._tab !== "inventory"}>
         <ai-drafts-inventory
           .t=${e}
-          .items=${fn}
-          .dependencies=${pn}
-          .stateLabelOf=${(e) => ln.get(e) ?? e}
+          .items=${_n}
+          .dependencies=${vn}
+          .stateLabelOf=${(e) => mn.get(e) ?? e}
         ></ai-drafts-inventory>
       </div>
     `;
@@ -4567,11 +5133,16 @@ var nn = tn(), rn = [
       overflow-x: auto;
       background-color: var(--app-header-background-color, var(--primary-color));
       color: var(--app-header-text-color, var(--text-primary-color));
+      border-bottom: 1px solid var(--divider-color);
       scrollbar-width: none;
     }
     .tabs button {
+      display: inline-flex;
       flex: none;
-      padding: 12px 16px;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 16px;
       font: inherit;
       font-size: 14px;
       font-weight: 500;
@@ -4581,21 +5152,39 @@ var nn = tn(), rn = [
       background: none;
       border: none;
       border-bottom: 3px solid transparent;
-      opacity: 0.75;
+      opacity: 0.7;
+    }
+    .tabs button ha-icon {
+      --mdc-icon-size: 20px;
+    }
+    .tabs button:hover {
+      opacity: 1;
+      background-color: color-mix(in srgb, currentColor 8%, transparent);
     }
     .tabs button.active {
       border-bottom-color: currentColor;
       opacity: 1;
+    }
+    .tabs button.active ha-icon {
+      color: var(--primary-color);
     }
     .tabs button:focus-visible {
       outline: 2px solid currentColor;
       outline-offset: -4px;
     }
     .content {
-      padding: 16px;
+      padding: 20px 16px 32px;
+    }
+    @media (max-width: 480px) {
+      .tabs button {
+        padding: 0 12px;
+      }
+      .content {
+        padding: 12px 12px 24px;
+      }
     }
     .view {
-      max-width: 760px;
+      max-width: 800px;
       margin: 0 auto;
     }
     .view.wide {
@@ -4607,4 +5196,4 @@ var nn = tn(), rn = [
   `;
 	}
 };
-customElements.define("ai-drafts-panel", mn);
+customElements.define("ai-drafts-panel", yn);

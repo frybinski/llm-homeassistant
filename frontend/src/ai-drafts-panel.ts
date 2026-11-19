@@ -38,6 +38,12 @@ const LOADED_HASH = loadedBundleHash();
 
 type Tab = "request" | "proposal" | "domain" | "inventory";
 const TABS: Tab[] = ["request", "proposal", "domain", "inventory"];
+const TAB_ICONS: Record<Tab, string> = {
+  request: "mdi:message-text-outline",
+  proposal: "mdi:clipboard-check-outline",
+  domain: "mdi:home-analytics",
+  inventory: "mdi:format-list-bulleted",
+};
 
 // Domain view and inventory still show the example house (milestone M3).
 const NET_FULL = mergeNets(NET_EXISTING, NET_PROPOSAL);
@@ -321,7 +327,8 @@ class AIDraftsPanel extends LitElement {
             class=${this._tab === tab ? "active" : ""}
             @click=${() => this._go(tab)}
           >
-            ${labels[tab]}
+            <ha-icon icon=${TAB_ICONS[tab]}></ha-icon>
+            <span>${labels[tab]}</span>
           </button>`,
         )}
       </div>
@@ -479,11 +486,16 @@ class AIDraftsPanel extends LitElement {
       overflow-x: auto;
       background-color: var(--app-header-background-color, var(--primary-color));
       color: var(--app-header-text-color, var(--text-primary-color));
+      border-bottom: 1px solid var(--divider-color);
       scrollbar-width: none;
     }
     .tabs button {
+      display: inline-flex;
       flex: none;
-      padding: 12px 16px;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 16px;
       font: inherit;
       font-size: 14px;
       font-weight: 500;
@@ -493,21 +505,39 @@ class AIDraftsPanel extends LitElement {
       background: none;
       border: none;
       border-bottom: 3px solid transparent;
-      opacity: 0.75;
+      opacity: 0.7;
+    }
+    .tabs button ha-icon {
+      --mdc-icon-size: 20px;
+    }
+    .tabs button:hover {
+      opacity: 1;
+      background-color: color-mix(in srgb, currentColor 8%, transparent);
     }
     .tabs button.active {
       border-bottom-color: currentColor;
       opacity: 1;
+    }
+    .tabs button.active ha-icon {
+      color: var(--primary-color);
     }
     .tabs button:focus-visible {
       outline: 2px solid currentColor;
       outline-offset: -4px;
     }
     .content {
-      padding: 16px;
+      padding: 20px 16px 32px;
+    }
+    @media (max-width: 480px) {
+      .tabs button {
+        padding: 0 12px;
+      }
+      .content {
+        padding: 12px 12px 24px;
+      }
     }
     .view {
-      max-width: 760px;
+      max-width: 800px;
       margin: 0 auto;
     }
     .view.wide {

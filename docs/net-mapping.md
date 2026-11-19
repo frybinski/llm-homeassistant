@@ -69,12 +69,18 @@ the automation and not to any single net element.
 
 State places exist only for states that some automation actually refers to.
 Every state place carries `entity_id`, `state` and an `origin` with `entity_id`
-and, when known, `area_id`.
+and, when known, `area_id`. A control place carries `automation_id` and an
+`origin` with it.
 
 ### Transitions
 
 Every transition has an `id`, a `kind`, an `origin` (`automation_id` and the
-config `path` it came from) and a list of `annotations`.
+config `path` it came from) and a list of `annotations`, each `{"name": ...,
+"value": ...}`. An `environment` transition's origin is the `entity_id` alone.
+
+Where one config element stands for several alternatives (see "Alternatives"
+below), each alternative is its own transition and the ids get a suffix: `#0`,
+`#1`, and so on.
 
 | Kind | Meaning | Id |
 |---|---|---|
@@ -84,7 +90,7 @@ config `path` it came from) and a list of `annotations`.
 | `branch` | One alternative of a `choose` or `if`, including the default. | `t:<automation_id>:<path>` of the alternative |
 | `fork`, `join` | Start and end of `parallel`. | `t:<automation_id>:<path>:fork`, `:join` |
 | `loop`, `exit` | Go round a `repeat` once more, or leave it. | `t:<automation_id>:<path>:loop`, `:exit` |
-| `stop` | A `stop` step, or a `condition` step that does not hold. | `t:<automation_id>:<path>` |
+| `stop` | A `stop` step, or a `condition` step that does not hold. | `t:<automation_id>:<path>` for a `stop` step, `t:<automation_id>:<path>:stop` for the failing side of a `condition` step |
 | `skip` | A step with no effect the net can express (set a variable, fire nothing). | same |
 | `environment` | Something outside the automations changes a state. | `t:env:<entity_id>:<state>` |
 
@@ -106,22 +112,39 @@ A `write` arc replaces the token of every state place of the same entity. This
 is a reset arc in Petri net terms. It removes the stuck token of version 0,
 where "turn on" could not fire while the light was already on.
 
+An arc is `{"kind", "source", "target"}` plus `"role"` on read arcs. Arcs have
+no id and no origin of their own; they belong to their transition.
+
+### Alternatives
+
+Several arcs into one transition mean *all of them*. Whatever Home Assistant
+treats as *any of them* therefore becomes several transitions between the same
+control places, never several arcs on one transition:
+
+- a trigger that names several entities, several target states, or both: one
+  transition per combination;
+- `wait_for_trigger` with several triggers: one `wait` transition per trigger,
+  and per combination within each.
+
+Conditions are the opposite case. A condition that names several entities
+requires all of them, so it is several read arcs on the same transition.
+
 ## Mapping rules
 
 ### Triggers
 
 | Trigger | Net |
 |---|---|
-| `state` with `to` | Read arc (role `trigger`) from each `p:<entity>:<to>`. `from` and `for` become annotations. |
-| `state` without `to` | Read arc from `p:<entity>:*`. |
-| `numeric_state` | Read arc from `p:<entity>:*`, annotation `guard` with the bounds. |
+| `state` with `to` | One transition per entity and target state, each with one read arc (role `trigger`) from `p:<entity>:<to>`. `from` and `for` become annotations. |
+| `state` without `to`, or on an `attribute` | One transition per entity, read arc from `p:<entity>:*`. `attribute`, `from` and `to` become annotations. |
+| `numeric_state` | One transition per entity, read arc from `p:<entity>:*`, annotation `guard` with the bounds. |
 | `sun` | Read arc from `p:sun.sun:*`, annotation `event` (`sunset`, offset). |
 | `zone` | Read arc from `p:<entity>:*`, annotation `event`. |
 | `template` | Annotation `template`. Read arcs from `p:<entity>:*` for each entity the template refers to, when that can be determined. Listed as opaque. |
 | `time`, `time_pattern`, `event`, `homeassistant`, `webhook`, `mqtt`, `calendar`, `tag`, `conversation`, `device` and any other | No input place. Annotation `event` with the platform and its settings. `device` triggers are opaque. |
 
 Every trigger transition produces `triggered` and carries the automation's mode
-as annotation `mode`.
+as annotation `mode`. A disabled trigger yields no transition.
 
 ### Conditions of the automation
 
@@ -130,7 +153,7 @@ starts when they hold.
 
 | Condition | Net |
 |---|---|
-| `state` | Read arc (role `condition`) from each `p:<entity>:<state>`. |
+| `state` | Read arc (role `condition`) from `p:<entity>:<state>` for each entity; all must hold. With several states, or with `match: any`, the arcs go to `p:<entity>:*` instead, with annotation `guard`, and the condition is opaque: it is an "or". |
 | `numeric_state` | Read arc from `p:<entity>:*`, annotation `guard`. |
 | `sun`, `time`, `zone`, `trigger` | Annotation `guard`. `sun` and `zone` also read `p:<entity>:*`. |
 | `template` | Annotation `guard` with the template, read arcs where entities can be determined. Opaque. |
@@ -145,29 +168,49 @@ the last one. `triggered` is the place before the first step.
 
 | Step | Net |
 |---|---|
-| Action call with a known effect | `action` transition with a `write` arc to the effect's state place for each target entity. |
+| Action call with a known effect | `action` transition with a `write` arc to the effect's state place for each target entity, annotation `action`. |
 | Action call with an unknown effect on its targets | `action` transition with a `write` arc to `p:<entity>:*` for each target, annotation `action`. |
 | Action call with no entity target (`notify.*`, `persistent_notification.*`, ...) | `action` transition without state arcs, annotation `action`. |
 | `delay` | `wait` transition, annotation `delay`. |
 | `wait_for_trigger` | `wait` transition with the read arcs its triggers would have, annotation `timeout` if set. |
-| `wait_template` | `wait` transition, annotation `template`. Opaque. |
+| `wait_template` | `wait` transition, annotation `template`, read arcs (role `trigger`) from `p:<entity>:*` for the entities the template refers to, when that can be determined. Opaque. |
 | `choose`, `if` | One `branch` transition per alternative, carrying that alternative's conditions like automation conditions, then the alternative's steps, all ending in the place after the whole step. The default, or an implicit empty one, is a `branch` too. |
 | `parallel` | A `fork` producing the first place of every branch, the branches, and a `join` consuming their last places. |
-| `repeat` | The body, then `loop` back to its first place and `exit` to the place after the step. The count or the `while`/`until` conditions are annotations and guards on these two. |
-| `condition` as a step | An `action`-free pair: a `skip` transition onward carrying the condition, and a `stop` transition to `done` for when it does not hold. |
+| `repeat` | See "Loops" below. |
+| `condition` as a step | A pair: a `skip` transition onward carrying the condition, and a `stop` transition to `done` for when it does not hold. |
 | `stop` | `stop` transition to `done`. |
 | `variables`, `event`, `sequence`, `set_conversation_response` | `sequence` is flattened. `event` is a `skip` with annotation `fires_event`. The others are `skip`. |
 | Any other step | `skip`, opaque. |
+| A disabled step | `skip` with annotation `disabled`. |
+| Steps after a `stop` in the same sequence | Not translated. Listed as opaque: they cannot be reached. |
 
-**Effects.** A small explicit table says which state a call leads to:
-`turn_on` → `on`, `turn_off` → `off` for every domain that has them; `lock.lock`
-→ `locked`, `lock.unlock` → `unlocked`; `cover.open_cover` → `open`,
-`cover.close_cover` → `closed`; `toggle` and everything not in the table → the
-`*` place, with annotation `action`.
+**Loops.** The place before the `repeat` step is the head of the loop.
+
+- With a count, `while` or `for_each`, the check comes first: `loop` takes the
+  token from the head into the body, the body's last step returns it to the
+  head, and `exit` takes it from the head to the place after the step. The loop
+  can run zero times.
+- With `until`, the check comes last: the body starts at the head and ends in
+  `p:<automation_id>:@<path>:end`; from there `loop` returns to the head and
+  `exit` leaves. The body runs at least once.
+
+The `while` conditions sit on `loop` and the `until` conditions on `exit`, as
+read arcs and guards like any condition. The other transition of the pair
+carries annotation `otherwise`. A count or `for_each` is an annotation on
+`loop`.
+
+**Effects.** The table in `net/effects.py` says which state a call leads to and
+is the authority. `turn_on` → `on` and `turn_off` → `off` hold only for domains
+whose state really is `on` or `off`; `lock.lock` → `locked`, `lock.unlock` →
+`unlocked`; `cover.open_cover` → `open`, `cover.close_cover` → `closed`. For
+`homeassistant.turn_on` and `turn_off` the domain of each target entity decides.
+`toggle` and everything not in the table write the `*` place.
 
 **Targets.** Entities named directly are used as they are. Targets given as
-area, floor, label or device are resolved to entities at translation time and
-annotated `resolved_from`. The answer can go stale when entities move.
+area, floor, label or device are resolved at translation time to the entities
+the call would reach: those of the action's domain, without hidden and disabled
+ones. They are annotated `resolved_from`. The answer can go stale when entities
+move.
 
 **Indirection.** Calls to scripts, scenes and other automations (`script.*`,
 `scene.turn_on`, `automation.trigger`, ...) are `action` transitions with
@@ -178,7 +221,26 @@ annotation `calls` naming the target. Their effects are not followed. Opaque.
 On request, the translation adds an `environment` transition with a `write` arc
 for every state place that some transition reads and no automation writes.
 Without these, such places could never gain a token. They are off by default,
-because they are noise in the domain view.
+because they are noise in the domain view. A write to an entity's `*` place does
+not count as writing one of its named states.
+
+### Reading configurations
+
+- The older spellings (`trigger:` and `platform:`, `condition:`, `action:` and
+  `service:`) are read like the current ones. Paths always use the current,
+  plural names.
+- An automation without an `id` whose object id equals another automation's
+  `id` gets the suffix `~yaml`.
+- An automation that cannot be translated at all, for instance because its
+  blueprint is missing, is a record with one opaque entry whose `path` is empty.
+
+### Change sets
+
+The net can include the operations of a change set that is not written yet,
+with `source: "proposal"`. A create is added; without an id it is called
+`<change_set_id>_<index>`. An update replaces the existing automation's net and
+keeps its `entity_id`. A delete removes it, together with state places that
+nothing else touches.
 
 ## What the net does not say
 
@@ -204,6 +266,14 @@ because they are noise in the domain view.
 10. **Effects.** Only the calls in the effect table lead to a named state.
 11. **Change versus level.** The distinction between trigger and condition is
     carried by the arc's role, not by the token game.
+12. **Alternatives multiply.** A trigger over several entities and states
+    becomes one transition per combination. The net grows accordingly.
+13. **Device triggers, conditions and actions** are opaque. Automations made in
+    the editor use them often, so many of those will be incomplete.
+14. **Events.** An event fired by one automation and awaited by another is not
+    connected.
+15. **Initial marking.** The net says which states exist, not which one holds
+    now.
 
 Whenever one of these applies to an automation, its record says so in `opaque`
 and `complete` is false. Findings of the conflict analysis that rest on such an
@@ -218,6 +288,11 @@ arcs:
 - a `read` arc becomes an arc into the transition and an arc back;
 - a `write` arc becomes one transition per state place of the entity that
   moves the token to the target, plus one that leaves it where it already is;
-- kinds, roles, origins and annotations go into `toolspecific` elements.
+- kinds, roles, origins and annotations go into `toolspecific` elements;
+- ids are `p1`, `t1` and so on, because PNML ids must be XML names; the original
+  id is kept as the name.
 
-The expansion is done at export time only.
+The expansion is done at export time only. A transition that writes several
+entities expands to the product of their state places. Beyond a fixed number of
+variants the writes are chained through intermediate places instead, which is
+no longer atomic. The exported net has no initial marking.

@@ -577,7 +577,18 @@ Der zweite Versuch gelang mit der richtigen Adresse. Dabei fiel auf, dass im Mod
 - **Modellwechsel im Panel.** Neben dem Anfragefeld steht eine Auswahl mit den Modellen der Quelle. Das eingerichtete Modell ist vorausgewählt und als Standard markiert. Die Wahl gilt für die folgenden Entwürfe, solange das Panel offen ist, und ändert den Standard nicht. Bei der Quelle AI Task stehen dort die AI-Task-Entitäten.
 - **Modell im Verlauf.** Jeder Eintrag zeigt, welches Modell ihn erzeugt hat.
 
-Basis-URLs gängiger Server stehen in der README. Für Open WebUI ist es die Adresse des Servers gefolgt von `/api`, mit einem API-Schlüssel aus den Kontoeinstellungen.
+- **Hinweis bei veralteter Oberfläche.** Nach einem Update mit Neustart lädt Home Assistant die Seite nicht neu, der offene Browser-Tab arbeitet mit dem alten Panel weiter. Das Panel vergleicht deshalb den Hash, mit dem es geladen wurde, mit dem, den das Backend meldet, und zeigt bei Abweichung eine Meldung mit einem Knopf zum Neuladen.
+
+Basis-URLs gängiger Server stehen in der README.
+
+### Erster Lauf mit einem echten Modell
+
+Am 19.11.2026 in der Instanz des Auftraggebers, Modell `gemma4:26b` über einen Open-WebUI-Server, Quelle „OpenAI-kompatibler Server“:
+
+- Die Anfrage „Erstelle eine Automation, welche die Heizung im Seminarraum morgens um 7:30 während der Wintermonate anschaltet“ wurde ohne Reparaturrunde als `checked` eingestuft und übernommen. Der Auftraggeber fand die Automation auf den ersten Blick plausibel.
+- Die Anfrage „test“ brauchte eine Reparaturrunde und wurde verworfen.
+
+Was das zeigt: Der Weg vom echten Modell bis zur geschriebenen Automation funktioniert. Was es nicht zeigt: dass die Automation inhaltlich stimmt. Der Inhalt wurde nicht im Einzelnen geprüft, und Stufe A prüft Bedingungen wie „Wintermonate“ nicht auf Richtigkeit. Die Flurlicht-Anfrage aus der Abnahme ist mit einem echten Modell noch nicht gelaufen. Für Open WebUI ist es die Adresse des Servers gefolgt von `/api`, mit einem API-Schlüssel aus den Kontoeinstellungen.
 
 ### Zur Arbeitsweise
 
@@ -587,9 +598,9 @@ Drei Tests liefen lokal durch und in der CI nicht. Home Assistant installiert be
 
 ### Wie es weitergeht
 
-Teil 3 braucht Zugang zu einem echten Modell:
+Teil 3 läuft über die Instanz des Auftraggebers, dort gibt es ein echtes Modell:
 
-1. Die Flurlicht-Anfrage mit einem echten Modell prüfen. Das ist der offene Teil der Abnahme.
+1. Die Flurlicht-Anfrage mit einem echten Modell prüfen und den Inhalt der Automation ansehen. Das ist der offene Teil der Abnahme.
 2. AI Task und den eigenen Client vergleichen und entscheiden, welcher Weg empfohlen wird.
 3. Den Eval-Satz beginnen.
 

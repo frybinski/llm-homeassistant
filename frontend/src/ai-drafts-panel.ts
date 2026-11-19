@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, type PropertyValues, css, html, nothing } from "lit";
 import { type ApiError, createDraft, decide, listChangeSets, listModels, toApiError } from "./api";
 import { AUTOMATIONS, HOUSE, NET_EXISTING, NET_PROPOSAL, PROPOSAL } from "./demo";
 import { type Strings, getStrings } from "./localize";
@@ -22,6 +22,19 @@ import "./views/domain-view";
 import "./views/inventory";
 import "./views/proposal";
 import "./views/request";
+
+/**
+ * The hash this bundle was loaded with: the `v` of its own module URL, which the
+ * backend sets to the content hash of the bundle. Null if the URL has none.
+ */
+function loadedBundleHash(): string | null {
+  try {
+    return new URL(import.meta.url).searchParams.get("v") || null;
+  } catch {
+    return null;
+  }
+}
+const LOADED_HASH = loadedBundleHash();
 
 type Tab = "request" | "proposal" | "domain" | "inventory";
 const TABS: Tab[] = ["request", "proposal", "domain", "inventory"];
@@ -57,6 +70,7 @@ class AIDraftsPanel extends LitElement {
     route: { attribute: false },
     panel: { attribute: false },
     _info: { state: true },
+    _latestHash: { state: true },
     _tab: { state: true },
     _history: { state: true },
     _models: { state: true },
@@ -76,6 +90,8 @@ class AIDraftsPanel extends LitElement {
   declare route: Route;
   declare panel: PanelInfo;
   declare _info: InfoState;
+  /** Bundle hash the backend reported last, or null if not known yet. */
+  declare _latestHash: string | null;
   declare _tab: Tab;
   declare _history: HistoryState;
   declare _models: ModelsState;
@@ -100,6 +116,7 @@ class AIDraftsPanel extends LitElement {
   constructor() {
     super();
     this._info = { status: "loading" };
+    this._latestHash = null;
     this._tab = "request";
     this._history = { status: "loading" };
     this._models = { status: "loading" };
@@ -114,7 +131,12 @@ class AIDraftsPanel extends LitElement {
     this._mode = "house";
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    // The connection came back: Home Assistant may have restarted with an update.
+    const before = changed.get("hass") as HomeAssistant | undefined;
+    if (this.hass && before?.connected === false && this.hass.connected === true) {
+      void this._checkBundle();
+    }
     // Load once, as soon as `hass` is available.
     if (this.hass && !this._requested) {
       this._requested = true;
@@ -131,8 +153,19 @@ class AIDraftsPanel extends LitElement {
         Extract<InfoState, { status: "ready" }>["info"]
       >({ type: "ai_drafts/info" });
       this._info = { status: "ready", info };
+      this._latestHash = info.bundle_hash ?? null;
     } catch (err) {
       this._info = { status: "error", message: toApiError(err).message };
+    }
+  }
+
+  /** Ask the backend which bundle it serves now. Silent: a failure shows nothing. */
+  private async _checkBundle(): Promise<void> {
+    try {
+      const info = await this.hass.callWS<{ bundle_hash?: string }>({ type: "ai_drafts/info" });
+      this._latestHash = info.bundle_hash ?? null;
+    } catch {
+      // Not connected or not set up: the other views report their own errors.
     }
   }
 
@@ -222,6 +255,7 @@ class AIDraftsPanel extends LitElement {
     this._tab = tab;
     this._visit();
     if (tab === "request") {
+      void this._checkBundle();
       void this._loadHistory();
       void this._loadModels();
     }
@@ -237,6 +271,11 @@ class AIDraftsPanel extends LitElement {
     if (!this._current) return;
     const name = this._tab === "proposal" ? `proposal.${this._part}` : this._tab;
     if (!this._viewsOpened.includes(name)) this._viewsOpened = [...this._viewsOpened, name];
+  }
+
+  /** True if the backend serves a newer bundle than the one running here. */
+  private _outdated(): boolean {
+    return LOADED_HASH !== null && this._latestHash !== null && this._latestHash !== LOADED_HASH;
   }
 
   private _nameOf = (entityId: string): string => {
@@ -260,6 +299,17 @@ class AIDraftsPanel extends LitElement {
         <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
         <div class="title">${t.title}</div>
       </div>
+      ${this._outdated()
+        ? html`<div class="outdated" role="alert">
+            <div class="outdated-text">
+              <strong>${t.outdatedTitle}</strong>
+              <span>${t.outdatedText}</span>
+            </div>
+            <button type="button" class="outdated-button" @click=${() => location.reload()}>
+              ${t.outdatedReload}
+            </button>
+          </div>`
+        : nothing}
       <div class="tabs" role="tablist">
         ${TABS.map(
           (tab) => html`<button
@@ -392,6 +442,37 @@ class AIDraftsPanel extends LitElement {
     .title {
       font-size: 20px;
       font-weight: 400;
+    }
+    .outdated {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background-color: var(--warning-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .outdated-text {
+      display: flex;
+      flex: 1 1 280px;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 14px;
+    }
+    .outdated-button {
+      flex: none;
+      padding: 8px 16px;
+      font: inherit;
+      font-weight: 500;
+      color: var(--primary-text-color);
+      background-color: var(--card-background-color, var(--primary-background-color));
+      border: 1px solid var(--divider-color);
+      border-radius: var(--ha-border-radius, 4px);
+      cursor: pointer;
+    }
+    .outdated-button:focus-visible {
+      outline: 2px solid var(--primary-text-color);
+      outline-offset: 2px;
     }
     .tabs {
       display: flex;

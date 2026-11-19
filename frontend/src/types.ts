@@ -2,6 +2,8 @@
 export interface HomeAssistant {
   language: string;
   locale: { language: string };
+  /** False while the WebSocket connection to Home Assistant is lost. */
+  connected?: boolean;
   states: Record<string, { state: string; attributes: Record<string, unknown> }>;
   callWS<T>(msg: { type: string; [key: string]: unknown }): Promise<T>;
 }
@@ -18,6 +20,8 @@ export interface Route {
 /** Result of the `ai_drafts/info` WebSocket command. */
 export interface AIDraftsInfo {
   version: string;
+  /** Hash of the bundle the backend currently serves (the `v` of its URL). */
+  bundle_hash: string;
   model_source: "ai_task" | "openai_compatible" | null;
   model: string | null;
 }

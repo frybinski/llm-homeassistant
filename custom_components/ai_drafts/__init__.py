@@ -73,14 +73,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: AIDraftsConfigEntry) -> 
     await changesets.async_load()
     await journal.async_load()
     await snapshots.async_load()
-    entry.runtime_data = AIDraftsData(
-        entry=entry, changesets=changesets, journal=journal, snapshots=snapshots
-    )
-
     # The static path sends long cache headers, so the URL must change whenever
     # the bundle does: version the URL by the content of the file.
     bundle = Path(__file__).parent / "frontend" / PANEL_BUNDLE_FILE
     cache_buster = await hass.async_add_executor_job(_content_hash, bundle)
+    entry.runtime_data = AIDraftsData(
+        entry=entry,
+        changesets=changesets,
+        journal=journal,
+        snapshots=snapshots,
+        bundle_hash=cache_buster,
+    )
+
     await panel_custom.async_register_panel(
         hass,
         frontend_url_path=PANEL_URL_PATH,

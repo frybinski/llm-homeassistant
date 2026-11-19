@@ -10,6 +10,12 @@ const EN = {
   error: "Could not load AI Drafts information.",
   retry: "Retry",
 
+  // Outdated panel notice
+  outdatedTitle: "This interface is outdated",
+  outdatedText:
+    "AI Drafts was updated, but this page is still running the old version. Reload the page to use the new one.",
+  outdatedReload: "Reload page",
+
   // Demo marking (domain view and inventory only)
   demoTitle: "Example data",
   demoText:
@@ -248,6 +254,12 @@ const DE: Strings = {
   loading: "Lädt…",
   error: "Die Informationen zu AI Drafts konnten nicht geladen werden.",
   retry: "Erneut versuchen",
+
+  // Hinweis: Oberfläche veraltet
+  outdatedTitle: "Diese Oberfläche ist veraltet",
+  outdatedText:
+    "AI Drafts wurde aktualisiert, aber diese Seite läuft noch mit der alten Version. Lade die Seite neu, um die neue zu verwenden.",
+  outdatedReload: "Seite neu laden",
 
   demoTitle: "Beispieldaten",
   demoText:

@@ -98,7 +98,7 @@ async def ws_info(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Return the version and the configured model source (never the API key)."""
+    """Return version, bundle hash and the model source (never the API key)."""
     if (entry := _get_loaded_entry(hass, connection, msg["id"])) is None:
         return
     integration = await async_get_integration(hass, DOMAIN)
@@ -113,6 +113,7 @@ async def ws_info(
             "version": str(integration.version),
             "model_source": source,
             "model": model or None,
+            "bundle_hash": entry.runtime_data.bundle_hash,
         },
     )
 

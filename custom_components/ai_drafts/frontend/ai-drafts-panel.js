@@ -521,27 +521,27 @@ function V(e) {
 	}
 	return new De("unknown", String(e));
 }
-async function Oe(e, t) {
+async function H(e, t) {
 	try {
 		return await e.callWS(t);
 	} catch (e) {
 		throw V(e);
 	}
 }
-var ke = (e) => Oe(e, { type: "ai_drafts/changesets/list" }), Ae = (e) => Oe(e, { type: "ai_drafts/models" }), je = (e, t, n) => Oe(e, {
+var Oe = (e) => H(e, { type: "ai_drafts/changesets/list" }), ke = (e) => H(e, { type: "ai_drafts/models" }), Ae = (e, t, n) => H(e, {
 	type: "ai_drafts/draft",
 	request: t,
 	...n === void 0 ? {} : { model: n }
 });
-function Me(e, t, n, r) {
+function je(e, t, n, r) {
 	let i = {
 		type: `ai_drafts/changesets/${t}`,
 		change_set_id: n
 	};
-	return t !== "revert" && (i.decided_in = r.decidedIn, i.views_opened = r.viewsOpened), Oe(e, i);
+	return t !== "revert" && (i.decided_in = r.decidedIn, i.views_opened = r.viewsOpened), H(e, i);
 }
 // src/demo/automations.json
-var Ne = [
+var Me = [
 	{
 		id: "nachtmodus_an",
 		alias: "Nachtmodus um 23 Uhr",
@@ -619,7 +619,7 @@ var Ne = [
 			target: { entity_id: "light.wohnzimmer_stehlampe" }
 		}]
 	}
-], Pe = [
+], Ne = [
 	{
 		id: "cs_demo_flurlicht",
 		request: "Schalte das Flurlicht bei Bewegung nach Sonnenuntergang für 3 Minuten ein",
@@ -804,7 +804,7 @@ var Ne = [
 		created: "2026-11-16T07:12:44+00:00",
 		decided: null
 	}
-], Fe = {
+], Pe = {
 	areas: [
 		{
 			id: "flur",
@@ -887,7 +887,7 @@ var Ne = [
 			area_id: null
 		}
 	]
-}, Ie = {
+}, Fe = {
 	format: "ai_drafts.net",
 	version: 0,
 	places: [
@@ -1346,7 +1346,7 @@ var Ne = [
 			kind: "produce"
 		}
 	]
-}, Le = {
+}, Ie = {
 	format: "ai_drafts.net",
 	version: 0,
 	places: [
@@ -1470,7 +1470,7 @@ var Ne = [
 			kind: "produce"
 		}
 	]
-}, Re = Fe, ze = Ne, Be = Ie, Ve = Le, He = Pe[0], Ue = {
+}, Le = Pe, Re = Me, ze = Fe, Be = Ie, Ve = Ne[0], He = {
 	title: "AI Drafts",
 	version: "Version",
 	modelSource: "Model source",
@@ -1481,6 +1481,9 @@ var Ne = [
 	loading: "Loading…",
 	error: "Could not load AI Drafts information.",
 	retry: "Retry",
+	outdatedTitle: "This interface is outdated",
+	outdatedText: "AI Drafts was updated, but this page is still running the old version. Reload the page to use the new one.",
+	outdatedReload: "Reload page",
 	demoTitle: "Example data",
 	demoText: "This view shows fixed example data, not your house. It reads nothing from Home Assistant and writes nothing.",
 	tabRequest: "Request and history",
@@ -1656,7 +1659,7 @@ var Ne = [
 	unitHour: ["hour", "hours"],
 	unitMinute: ["minute", "minutes"],
 	unitSecond: ["second", "seconds"]
-}, We = {
+}, Ue = {
 	title: "AI Drafts",
 	version: "Version",
 	modelSource: "Modellquelle",
@@ -1667,6 +1670,9 @@ var Ne = [
 	loading: "Lädt…",
 	error: "Die Informationen zu AI Drafts konnten nicht geladen werden.",
 	retry: "Erneut versuchen",
+	outdatedTitle: "Diese Oberfläche ist veraltet",
+	outdatedText: "AI Drafts wurde aktualisiert, aber diese Seite läuft noch mit der alten Version. Lade die Seite neu, um die neue zu verwenden.",
+	outdatedReload: "Seite neu laden",
 	demoTitle: "Beispieldaten",
 	demoText: "Diese Ansicht zeigt feste Beispieldaten, nicht dein Haus. Sie liest nichts aus Home Assistant und schreibt nichts.",
 	tabRequest: "Anfrage und Verlauf",
@@ -1843,10 +1849,10 @@ var Ne = [
 	unitMinute: ["Minute", "Minuten"],
 	unitSecond: ["Sekunde", "Sekunden"]
 };
-function Ge(e) {
-	return e?.toLowerCase().startsWith("de") ? We : Ue;
+function We(e) {
+	return e?.toLowerCase().startsWith("de") ? Ue : He;
 }
-function Ke(e, t) {
+function Ge(e, t) {
 	return {
 		draft: e.statusDraft,
 		checked: e.statusChecked,
@@ -1856,7 +1862,7 @@ function Ke(e, t) {
 		discarded: e.statusDiscarded
 	}[t] ?? t;
 }
-function qe(e, t) {
+function Ke(e, t) {
 	let n = e?.toLowerCase().startsWith("de");
 	return {
 		on: ["on", "an"],
@@ -1867,7 +1873,7 @@ function qe(e, t) {
 	}[t]?.[+!!n] ?? t;
 }
 // src/logic/describe.ts
-function Je(e, t) {
+function qe(e, t) {
 	let n = (e) => t.areas.find((t) => t.id === e)?.name ?? null, r = e.triggers.map((e) => ({
 		text: e.label,
 		room: n(e.areaId)
@@ -1887,7 +1893,7 @@ function Je(e, t) {
 	};
 }
 // src/logic/net.ts
-function Ye(...e) {
+function Je(...e) {
 	return {
 		format: e[0].format,
 		version: e[0].version,
@@ -1896,10 +1902,10 @@ function Ye(...e) {
 		arcs: e.flatMap((e) => e.arcs)
 	};
 }
-function Xe(e, t) {
+function Ye(e, t) {
 	return e.annotations.find((e) => e.type === t)?.value ?? null;
 }
-function Ze(e) {
+function Xe(e) {
 	let t = new Map(e.places.map((e) => [e.id, e])), n = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Map();
 	for (let t of e.arcs) {
 		let e = t.kind === "produce" ? t.source : t.target, n = r.get(e) ?? [];
@@ -1920,7 +1926,7 @@ function Ze(e) {
 		}, n.set(e, a));
 		let o = r.get(i.id) ?? [];
 		if (i.kind === "trigger") {
-			a.mode ??= Xe(i, "mode");
+			a.mode ??= Ye(i, "mode");
 			let e = o.filter((e) => e.kind === "read").map((e) => t.get(e.source)).filter((e) => e?.kind === "state"), n = e.find((e) => e.entity_id === i.origin.entity_id);
 			a.triggers.push({
 				transitionId: i.id,
@@ -1928,7 +1934,7 @@ function Ze(e) {
 				entityId: i.origin.entity_id ?? null,
 				areaId: i.origin.area_id ?? null,
 				placeId: n?.id ?? null,
-				event: Xe(i, "event")
+				event: Ye(i, "event")
 			});
 			for (let t of e) t !== n && (a.conditions.some((e) => e.placeId === t.id) || a.conditions.push({
 				placeId: t.id,
@@ -1944,17 +1950,17 @@ function Ze(e) {
 				entityId: n.entity_id ?? "",
 				areaId: n.origin.area_id ?? null,
 				placeId: n.id,
-				delay: Xe(i, "delay")
+				delay: Ye(i, "delay")
 			});
 		}
 	}
-	for (let e of n.values()) e.reads = Qe([...e.triggers.flatMap((e) => e.placeId ? [e.placeId] : []), ...e.conditions.map((e) => e.placeId)]), e.writes = Qe(e.effects.map((e) => e.placeId));
+	for (let e of n.values()) e.reads = Ze([...e.triggers.flatMap((e) => e.placeId ? [e.placeId] : []), ...e.conditions.map((e) => e.placeId)]), e.writes = Ze(e.effects.map((e) => e.placeId));
 	return [...n.values()];
 }
-function Qe(e) {
+function Ze(e) {
 	return [...new Set(e)];
 }
-function $e(e) {
+function Qe(e) {
 	let t = [];
 	for (let n of e) for (let r of e) if (n.id !== r.id) for (let e of n.writes) {
 		if (!r.reads.includes(e)) continue;
@@ -1968,7 +1974,7 @@ function $e(e) {
 	}
 	return t;
 }
-function et(e, t) {
+function $e(e, t) {
 	let n = {
 		entityIds: /* @__PURE__ */ new Set(),
 		automationIds: /* @__PURE__ */ new Set(),
@@ -1981,14 +1987,14 @@ function et(e, t) {
 	}
 	return n;
 }
-var tt = {
+var et = {
 	entityIds: /* @__PURE__ */ new Set(),
 	automationIds: /* @__PURE__ */ new Set(),
 	placeIds: /* @__PURE__ */ new Set(),
 	transitionIds: /* @__PURE__ */ new Set()
 };
 // src/logic/text.ts
-function nt(e, t, n) {
+function tt(e, t, n) {
 	let r = [], i = "";
 	for (let n of e.split(/\s+/).filter(Boolean)) {
 		let e = i ? `${i} ${n}` : n;
@@ -2000,7 +2006,7 @@ function nt(e, t, n) {
 	}
 	return r;
 }
-function rt(e, t) {
+function nt(e, t) {
 	let n = /^(\d+):(\d{2}):(\d{2})$/.exec(e);
 	if (!n) return e;
 	let r = [], i = (e, [t, n]) => {
@@ -2008,11 +2014,11 @@ function rt(e, t) {
 	};
 	return i(Number(n[1]), t.hour), i(Number(n[2]), t.minute), i(Number(n[3]), t.second), r.join(" ") || e;
 }
-var it = 12, at = 12, ot = 180, st = 204, H = 16, ct = 26;
-function lt(e, t) {
+var rt = 12, it = 12, at = 180, ot = 204, U = 16, st = 26;
+function ct(e, t) {
 	return e ?? `event:${t}`;
 }
-function ut(e, t, n, r, i = "mdi:clock-outline") {
+function lt(e, t, n, r, i = "mdi:clock-outline") {
 	let a = e.areas.map((e) => ({
 		id: e.id,
 		name: e.name,
@@ -2036,7 +2042,7 @@ function ut(e, t, n, r, i = "mdi:clock-outline") {
 		icon: t.icon,
 		state: t.state
 	});
-	for (let e of t) for (let t of e.triggers) t.entityId === null && u(lt(null, t.transitionId), s, {
+	for (let e of t) for (let t of e.triggers) t.entityId === null && u(ct(null, t.transitionId), s, {
 		entityId: null,
 		name: r(t.transitionId),
 		icon: i,
@@ -2045,39 +2051,39 @@ function ut(e, t, n, r, i = "mdi:clock-outline") {
 	let f = (e, t) => t.some((t) => t.channel === e), p = /* @__PURE__ */ new Map();
 	for (let e of t) {
 		let t = [
-			...e.triggers.map((e) => c.get(lt(e.entityId, e.transitionId))?.col),
+			...e.triggers.map((e) => c.get(ct(e.entityId, e.transitionId))?.col),
 			...e.effects.map((e) => c.get(e.entityId)?.col),
 			...e.conditions.map((e) => c.get(e.entityId)?.col)
-		].filter((e) => e !== void 0), n = e.triggers.map((e) => c.get(lt(e.entityId, e.transitionId))?.col).find((e) => e !== void 0) ?? 0, r = t.filter((e) => e < n).length, i = t.filter((e) => e > n).length, o = r > i || r === i && n === a.length - 1;
+		].filter((e) => e !== void 0), n = e.triggers.map((e) => c.get(ct(e.entityId, e.transitionId))?.col).find((e) => e !== void 0) ?? 0, r = t.filter((e) => e < n).length, i = t.filter((e) => e > n).length, o = r > i || r === i && n === a.length - 1;
 		p.set(e.id, o ? n : n + 1);
 	}
-	let m = [...p.values()].map((e) => ({ channel: e })), h = f(0, m) ? st : 0, g = (e) => H + h + e * 384, ee = (e) => g(e) - st / 2, _ = f(a.length, m) ? st : 0, v = [], y = [], b = 0;
+	let m = [...p.values()].map((e) => ({ channel: e })), h = f(0, m) ? ot : 0, g = (e) => U + h + e * 384, ee = (e) => g(e) - ot / 2, _ = f(a.length, m) ? ot : 0, v = [], y = [], b = 0;
 	a.forEach((e, t) => {
-		let n = l[t], r = 48 + n.length * 64 - it + at;
+		let n = l[t], r = 48 + n.length * 64 - rt + it;
 		y.push({
 			id: e.id,
 			name: e.name,
 			icon: e.icon,
 			col: t,
 			x: g(t),
-			y: H,
-			w: ot,
+			y: U,
+			w: at,
 			h: r
 		}), n.forEach((e, n) => {
 			let r = c.get(e);
 			r && v.push({
 				...r,
-				x: g(t) + at,
+				x: g(t) + it,
 				y: 64 + n * 64
 			});
-		}), b = Math.max(b, H + r);
+		}), b = Math.max(b, U + r);
 	});
 	let x = new Map(v.map((e) => [e.key, e])), S = [];
 	for (let e of t) {
 		for (let t of e.triggers) S.push({
 			automationId: e.id,
 			kind: "trigger",
-			tileKey: lt(t.entityId, t.transitionId)
+			tileKey: ct(t.entityId, t.transitionId)
 		});
 		for (let t of e.effects) S.push({
 			automationId: e.id,
@@ -2092,7 +2098,7 @@ function ut(e, t, n, r, i = "mdi:clock-outline") {
 	}
 	let C = [], w = /* @__PURE__ */ new Map();
 	for (let e of t) {
-		let t = S.filter((t) => t.automationId === e.id).map((e) => x.get(e.tileKey)).filter((e) => e !== void 0).map((e) => e.y + 26), n = t.length ? t.reduce((e, t) => e + t, 0) / t.length : H, r = p.get(e.id) ?? 0;
+		let t = S.filter((t) => t.automationId === e.id).map((e) => x.get(e.tileKey)).filter((e) => e !== void 0).map((e) => e.y + 26), n = t.length ? t.reduce((e, t) => e + t, 0) / t.length : U, r = p.get(e.id) ?? 0;
 		w.set(r, [...w.get(r) ?? [], {
 			id: e.id,
 			want: n
@@ -2100,7 +2106,7 @@ function ut(e, t, n, r, i = "mdi:clock-outline") {
 	}
 	for (let [e, t] of w) {
 		t.sort((e, t) => e.want - t.want || e.id.localeCompare(t.id));
-		let r = H;
+		let r = U;
 		for (let i of t) {
 			let t = Math.max(r, i.want - 23);
 			C.push({
@@ -2108,8 +2114,8 @@ function ut(e, t, n, r, i = "mdi:clock-outline") {
 				channel: e,
 				x: ee(e) - 70,
 				y: t,
-				lines: nt(n(i.id), 18, 2)
-			}), r = t + 46 + ct, b = Math.max(b, t + 46 + H);
+				lines: tt(n(i.id), 18, 2)
+			}), r = t + 46 + st, b = Math.max(b, t + 46 + U);
 		}
 	}
 	let T = new Map(C.map((e) => [e.automationId, e])), E = [];
@@ -2158,16 +2164,16 @@ function ut(e, t, n, r, i = "mdi:clock-outline") {
 		};
 	});
 	return {
-		width: g(a.length - 1) + ot + _ + H,
-		height: b + H,
+		width: g(a.length - 1) + at + _ + U,
+		height: b + U,
 		rooms: y,
 		tiles: v,
 		hubs: C,
 		edges: ne
 	};
 }
-var dt = 84, ft = 40;
-function pt(e, t) {
+var ut = 84, dt = 40;
+function ft(e, t) {
 	let n = e.transitions.filter((e) => e.origin.automation_id === t), r = new Set(n.map((e) => e.id)), i = e.arcs.filter((e) => r.has(e.kind === "produce" ? e.source : e.target)), a = new Set(i.map((e) => e.kind === "produce" ? e.target : e.source));
 	return {
 		transitions: n,
@@ -2175,8 +2181,8 @@ function pt(e, t) {
 		places: e.places.filter((e) => a.has(e.id) || e.origin.automation_id === t)
 	};
 }
-function mt(e, t) {
-	let { transitions: n, arcs: r, places: i } = pt(e, t), a = new Map(i.map((e) => [e.id, e])), o = new Map(n.map((e) => [e.id, e])), s = /* @__PURE__ */ new Map(), c = n.filter((e) => e.kind === "trigger"), l = n.filter((e) => e.kind === "action"), u = /* @__PURE__ */ new Set();
+function pt(e, t) {
+	let { transitions: n, arcs: r, places: i } = ft(e, t), a = new Map(i.map((e) => [e.id, e])), o = new Map(n.map((e) => [e.id, e])), s = /* @__PURE__ */ new Map(), c = n.filter((e) => e.kind === "trigger"), l = n.filter((e) => e.kind === "action"), u = /* @__PURE__ */ new Set();
 	c.forEach((e) => {
 		s.set(e.id, 1), u.add(e.id);
 	}), l.forEach((e, t) => {
@@ -2204,9 +2210,9 @@ function mt(e, t) {
 		let t = s.get(e) ?? 0, n = a.get(e);
 		u.has(e) ? p(t).mid.push(e) : n && d(n) ? p(t).up.push(e) : p(t).down.push(e);
 	}
-	let h = Math.max(0, ...[...f.values()].map((e) => e.up.length)), g = Math.max(1, ...[...f.values()].map((e) => e.mid.length)), ee = Math.max(0, ...[...f.values()].map((e) => e.down.length)), _ = ft + h * 120, v = /* @__PURE__ */ new Map();
+	let h = Math.max(0, ...[...f.values()].map((e) => e.up.length)), g = Math.max(1, ...[...f.values()].map((e) => e.mid.length)), ee = Math.max(0, ...[...f.values()].map((e) => e.down.length)), _ = dt + h * 120, v = /* @__PURE__ */ new Map();
 	for (let [e, t] of f) {
-		let n = dt + e * 150;
+		let n = ut + e * 150;
 		t.up.forEach((e, r) => v.set(e, {
 			x: n,
 			y: _ - (t.up.length - r) * 120
@@ -2228,7 +2234,7 @@ function mt(e, t) {
 			kind: n?.kind ?? r?.kind ?? "",
 			x: t.x,
 			y: t.y,
-			lines: nt(i, 22, 2),
+			lines: tt(i, 22, 2),
 			annotations: r?.annotations ?? []
 		};
 	};
@@ -2253,20 +2259,20 @@ function mt(e, t) {
 	return {
 		automationId: t,
 		width: 168 + Math.max(0, ...s.values()) * 150,
-		height: _ + (g + ee) * 120 + ft,
+		height: _ + (g + ee) * 120 + dt,
 		nodes: y,
 		edges: x
 	};
 }
 // src/views/shared.ts
-function U(e, t, n) {
+function W(e, t, n) {
 	e.dispatchEvent(new CustomEvent(t, {
 		detail: n,
 		bubbles: !0,
 		composed: !0
 	}));
 }
-function ht(e) {
+function mt(e) {
 	return P`
     <div class="demo-banner" role="note">
       <span class="demo-tag">${e.demoTitle}</span>
@@ -2274,7 +2280,7 @@ function ht(e) {
     </div>
   `;
 }
-function gt(e, t) {
+function ht(e, t) {
 	return {
 		busy: e.errBusy,
 		model_error: e.errModel,
@@ -2287,16 +2293,16 @@ function gt(e, t) {
 		not_found: e.errNotFound
 	}[t] ?? e.errUnknown;
 }
-function _t(e, t) {
+function gt(e, t) {
 	return P`
     <div class="error" role="alert">
-      <p>${gt(e, t.code)}</p>
+      <p>${ht(e, t.code)}</p>
       <p class="detail">${t.message}</p>
       <p class="detail code">${e.errorCode}: ${t.code}</p>
     </div>
   `;
 }
-var W = o`
+var _t = o`
   :host {
     display: block;
     color: var(--primary-text-color);
@@ -2479,7 +2485,7 @@ var W = o`
 			this.automations,
 			this.t
 		];
-		(!this._layout || e.some((e, t) => e !== this._layoutKey[t])) && (this._layoutKey = e, this._layout = ut(this.house, this.automations.map((e) => e.info), (e) => this._alias(e), (e) => this.automations.flatMap((e) => e.info.triggers).find((t) => t.transitionId === e)?.label ?? ""));
+		(!this._layout || e.some((e, t) => e !== this._layoutKey[t])) && (this._layoutKey = e, this._layout = lt(this.house, this.automations.map((e) => e.info), (e) => this._alias(e), (e) => this.automations.flatMap((e) => e.info.triggers).find((t) => t.transitionId === e)?.label ?? ""));
 	}
 	_alias(e) {
 		return this.automations.find((t) => t.info.id === e)?.alias ?? e;
@@ -2491,30 +2497,30 @@ var W = o`
 	render() {
 		let e = this.t;
 		return P`
-      ${ht(e)}
+      ${mt(e)}
       <div class="toolbar">
         <div class="segmented" role="group" aria-label=${e.viewMode}>
           ${["house", "net"].map((t) => P`<button
               type="button"
               class=${this.mode === t ? "on" : ""}
               aria-pressed=${this.mode === t ? "true" : "false"}
-              @click=${() => U(this, "set-mode", { mode: t })}
+              @click=${() => W(this, "set-mode", { mode: t })}
             >
               ${t === "house" ? e.viewHouse : e.viewNet}
             </button>`)}
         </div>
-        ${this._hasMarks ? L : P`<button type="button" class="secondary" @click=${() => U(this, "mark-example")}>
+        ${this._hasMarks ? L : P`<button type="button" class="secondary" @click=${() => W(this, "mark-example")}>
               ${e.markExample}
             </button>`}
         ${this._hasMarks ? P`<span class="chip marked">
               ${e.marksActive}
-              <button type="button" class="link" @click=${() => U(this, "clear-marks")}>
+              <button type="button" class="link" @click=${() => W(this, "clear-marks")}>
                 ${e.clear}
               </button>
             </span>` : L}
         ${this.focusId ? P`<span class="chip">
               ${e.focusActive(this._alias(this.focusId))}
-              <button type="button" class="link" @click=${() => U(this, "clear-focus")}>
+              <button type="button" class="link" @click=${() => W(this, "clear-focus")}>
                 ${e.clear}
               </button>
             </span>` : L}
@@ -2557,7 +2563,7 @@ var W = o`
                   <div class="icon-wrap"><ha-icon icon=${e.icon}></ha-icon></div>
                 </foreignObject>
                 <text class="tile-name" x=${e.x + 42} y=${e.state ? e.y + 22 : e.y + 31}>${yt(e.name, 18)}</text>
-                ${e.state ? F`<text class="tile-state" x=${e.x + 42} y=${e.y + 40}>${qe(this.language, e.state)}</text>` : L}
+                ${e.state ? F`<text class="tile-state" x=${e.x + 42} y=${e.y + 40}>${Ke(this.language, e.state)}</text>` : L}
               </g>`;
 		})}
           ${t.hubs.map((t) => {
@@ -2568,12 +2574,12 @@ var W = o`
                 tabindex="0"
                 role="button"
                 aria-label=${this._alias(t.automationId)}
-                @click=${() => U(this, "focus-automation", {
+                @click=${() => W(this, "focus-automation", {
 				automationId: t.automationId,
 				toggle: !0
 			})}
                 @keydown=${(e) => {
-				(e.key === "Enter" || e.key === " ") && (e.preventDefault(), U(this, "focus-automation", {
+				(e.key === "Enter" || e.key === " ") && (e.preventDefault(), W(this, "focus-automation", {
 					automationId: t.automationId,
 					toggle: !0
 				}));
@@ -2607,7 +2613,7 @@ var W = o`
     `;
 	}
 	_renderDiagram(e) {
-		let t = this.t, n = mt(this.net, e.info.id), r = {
+		let t = this.t, n = pt(this.net, e.info.id), r = {
 			mode: t.annotationMode,
 			delay: t.annotationDelay,
 			event: t.annotationEvent,
@@ -2720,7 +2726,7 @@ var W = o`
     `;
 	}
 	static {
-		this.styles = [W, o`
+		this.styles = [_t, o`
       .toolbar {
         display: flex;
         flex-wrap: wrap;
@@ -2987,7 +2993,7 @@ var bt = class extends B {
 	render() {
 		let e = this.t;
 		return P`
-      ${ht(e)}
+      ${mt(e)}
       <h2>${e.inventoryHeading}</h2>
       ${this.items.length === 0 ? P`<p class="muted">${e.inventoryEmpty}</p>` : L}
       <ul class="list">
@@ -3010,7 +3016,7 @@ var bt = class extends B {
           <span class="part">${n.triggers.map((e) => e.text).join(", ")}</span>
           <span class="arrow" aria-hidden="true">${t.summaryArrow}</span>
           <span class="part"
-            >${n.effects.map((e) => e.delay ? `${t.after(rt(e.delay, r))}: ${e.text}` : e.text).join(", ")}</span
+            >${n.effects.map((e) => e.delay ? `${t.after(nt(e.delay, r))}: ${e.text}` : e.text).join(", ")}</span
           >
         </p>
         <dl class="facts">
@@ -3028,7 +3034,7 @@ var bt = class extends B {
           <button
             type="button"
             class="secondary"
-            @click=${() => U(this, "focus-automation", { automationId: e.id })}
+            @click=${() => W(this, "focus-automation", { automationId: e.id })}
           >
             ${t.showInDomainView}
           </button>
@@ -3037,7 +3043,7 @@ var bt = class extends B {
     `;
 	}
 	static {
-		this.styles = [W, o`
+		this.styles = [_t, o`
       .list {
         margin: 0;
         padding: 0;
@@ -3141,7 +3147,7 @@ function Pt(e) {
 	};
 }
 function Ft(e, t) {
-	return typeof t == "boolean" ? Nt(e.t, qe(e.language, t ? "on" : "off")) : typeof t == "string" || typeof t == "number" ? Nt(e.t, qe(e.language, String(t))) : null;
+	return typeof t == "boolean" ? Nt(e.t, Ke(e.language, t ? "on" : "off")) : typeof t == "string" || typeof t == "number" ? Nt(e.t, Ke(e.language, String(t))) : null;
 }
 function It(e, t) {
 	let n = q(t).map((t) => Ft(e, t));
@@ -3151,12 +3157,12 @@ function X(e, t) {
 	let n = Pt(e.t);
 	if (typeof t == "string") {
 		let e = /^(\d+):(\d{2})(?::(\d{2}))?$/.exec(t);
-		return e ? rt(`${e[1]}:${e[2]}:${e[3] ?? "00"}`, n) : null;
+		return e ? nt(`${e[1]}:${e[2]}:${e[3] ?? "00"}`, n) : null;
 	}
 	if (typeof t == "number") {
 		if (!Number.isFinite(t) || t < 0) return null;
 		let e = Math.round(t), r = Math.floor(e / 3600), i = Math.floor(e % 3600 / 60), a = e % 60;
-		return rt(`${r}:${String(i).padStart(2, "0")}:${String(a).padStart(2, "0")}`, n);
+		return nt(`${r}:${String(i).padStart(2, "0")}:${String(a).padStart(2, "0")}`, n);
 	}
 	if (K(t)) {
 		let n = [
@@ -3504,7 +3510,7 @@ var Qt = ["description", "yaml"], $t = class extends B {
     ` : P`
         <section class="card">
           <p class="muted">${e.noProposal}</p>
-          <button type="button" class="secondary" @click=${() => U(this, "goto-request")}>
+          <button type="button" class="secondary" @click=${() => W(this, "goto-request")}>
             ${e.toRequest}
           </button>
         </section>
@@ -3518,7 +3524,7 @@ var Qt = ["description", "yaml"], $t = class extends B {
 		return P`
       <div class="head">
         <h2>${t.proposalHeading}</h2>
-        <span class="badge ${e.status}">${Ke(t, e.status)}</span>
+        <span class="badge ${e.status}">${Ge(t, e.status)}</span>
       </div>
       <p class="request">“${e.request}”</p>
       <dl class="facts small">
@@ -3550,7 +3556,7 @@ var Qt = ["description", "yaml"], $t = class extends B {
             type="button"
             class=${this.section === e ? "on" : ""}
             aria-pressed=${this.section === e ? "true" : "false"}
-            @click=${() => U(this, "set-part", { part: e })}
+            @click=${() => W(this, "set-part", { part: e })}
           >
             ${n[e]}
           </button>`)}
@@ -3630,7 +3636,7 @@ var Qt = ["description", "yaml"], $t = class extends B {
         ${e.net_refs.length > 0 ? P`<button
               type="button"
               class="secondary"
-              @click=${() => U(this, "show-finding", { netRefs: e.net_refs })}
+              @click=${() => W(this, "show-finding", { netRefs: e.net_refs })}
             >
               ${t.showInDomain}
             </button>` : L}
@@ -3659,11 +3665,11 @@ var Qt = ["description", "yaml"], $t = class extends B {
             class=${a[e]}
             ?disabled=${r}
             aria-busy=${this.pending === e ? "true" : "false"}
-            @click=${() => U(this, "decide", { decision: e })}
+            @click=${() => W(this, "decide", { decision: e })}
           >
             ${this.pending === e ? i[e][1] : i[e][0]}
           </button>`)}
-        ${e.status === "reverted" || e.status === "discarded" ? P`<button type="button" class="secondary" @click=${() => U(this, "goto-request")}>
+        ${e.status === "reverted" || e.status === "discarded" ? P`<button type="button" class="secondary" @click=${() => W(this, "goto-request")}>
               ${t.toRequest}
             </button>` : L}
       </div>
@@ -3677,11 +3683,11 @@ var Qt = ["description", "yaml"], $t = class extends B {
                 <a href="/config/automation/edit/${encodeURIComponent(e)}">${t.openInEditor}</a>
               </li>`)}
           </ul>` : L}
-      ${this.error ? _t(t, this.error) : L}
+      ${this.error ? gt(t, this.error) : L}
     `;
 	}
 	static {
-		this.styles = [W, o`
+		this.styles = [_t, o`
       .head {
         display: flex;
         align-items: center;
@@ -3948,7 +3954,7 @@ var en = class extends B {
             type="button"
             ?disabled=${!t}
             aria-busy=${this.drafting ? "true" : "false"}
-            @click=${() => U(this, "create-draft", {
+            @click=${() => W(this, "create-draft", {
 			request: this._text.trim(),
 			model: this._modelToSend()
 		})}
@@ -3958,7 +3964,7 @@ var en = class extends B {
           </button>
         </div>
         ${this.drafting ? P`<p class="muted note" role="status">${e.draftingNote}</p>` : L}
-        ${this.error ? _t(e, this.error) : L}
+        ${this.error ? gt(e, this.error) : L}
       </section>
       <section class="card">
         <h2>${e.historyHeading}</h2>
@@ -4026,7 +4032,7 @@ var en = class extends B {
         <div class="error" role="alert">
           <p>${e.error}</p>
           <p class="detail">${t.message}</p>
-          <button type="button" @click=${() => U(this, "retry-info")}>${e.retry}</button>
+          <button type="button" @click=${() => W(this, "retry-info")}>${e.retry}</button>
         </div>
       `;
 		let { info: n } = t, r = n.model_source === "ai_task" ? e.sourceAiTask : n.model_source === "openai_compatible" ? e.sourceOpenai : "–", i = n.model ?? (n.model_source === "ai_task" ? e.preferredAiTask : "–");
@@ -4045,7 +4051,7 @@ var en = class extends B {
         <div class="error" role="alert">
           <p>${e.historyError}</p>
           <p class="detail">${t.message}</p>
-          <button type="button" @click=${() => U(this, "retry-history")}>${e.retry}</button>
+          <button type="button" @click=${() => W(this, "retry-history")}>${e.retry}</button>
         </div>
       `;
 		if (t.items.length === 0) return P`<p class="muted">${e.historyEmpty}</p>`;
@@ -4064,10 +4070,10 @@ var en = class extends B {
                 type="button"
                 class="entry ${i ? "current" : ""}"
                 aria-current=${i ? "true" : "false"}
-                @click=${() => U(this, "open-changeset", { id: t.id })}
+                @click=${() => W(this, "open-changeset", { id: t.id })}
               >
                 <span class="line">
-                  <span class="badge ${t.status}">${Ke(e, t.status)}</span>
+                  <span class="badge ${t.status}">${Ge(e, t.status)}</span>
                   <span class="when muted">${n.format(new Date(t.created))}</span>
                   ${t.rounds > 0 ? P`<span class="muted">${e.roundsLabel(t.rounds)}</span>` : L}
                   ${t.model ? P`<span class="muted model">${e.historyModel}: ${t.model}</span>` : L}
@@ -4083,7 +4089,7 @@ var en = class extends B {
     `;
 	}
 	static {
-		this.styles = [W, o`
+		this.styles = [_t, o`
       label {
         display: block;
         margin-bottom: 6px;
@@ -4232,21 +4238,28 @@ var en = class extends B {
 };
 customElements.define("ai-drafts-request", en);
 // src/ai-drafts-panel.ts
-var tn = [
+function tn() {
+	try {
+		return new URL(import.meta.url).searchParams.get("v") || null;
+	} catch {
+		return null;
+	}
+}
+var nn = tn(), rn = [
 	"request",
 	"proposal",
 	"domain",
 	"inventory"
-], $ = Ye(Be, Ve), nn = String(He.operations[0]?.after?.id ?? ""), rn = new Map([...ze.map((e) => [e.id, e.alias]), [nn, String(He.operations[0]?.after?.alias ?? "")]]), an = Ze($), on = an.filter((e) => e.id !== nn), sn = new Map($.places.map((e) => [e.id, e.label])), cn = He.findings.flatMap((e) => e.net_refs), ln = an.map((e) => ({
+], $ = Je(ze, Be), an = String(Ve.operations[0]?.after?.id ?? ""), on = new Map([...Re.map((e) => [e.id, e.alias]), [an, String(Ve.operations[0]?.after?.alias ?? "")]]), sn = Xe($), cn = sn.filter((e) => e.id !== an), ln = new Map($.places.map((e) => [e.id, e.label])), un = Ve.findings.flatMap((e) => e.net_refs), dn = sn.map((e) => ({
 	info: e,
-	alias: rn.get(e.id) ?? e.id,
-	isProposal: e.id === nn
-})), un = on.map((e) => ({
+	alias: on.get(e.id) ?? e.id,
+	isProposal: e.id === an
+})), fn = cn.map((e) => ({
 	id: e.id,
-	alias: rn.get(e.id) ?? e.id,
+	alias: on.get(e.id) ?? e.id,
 	mode: e.mode,
-	description: Je(e, Re)
-})), dn = $e(on), fn = class extends B {
+	description: qe(e, Le)
+})), pn = Qe(cn), mn = class extends B {
 	static {
 		this.properties = {
 			hass: { attribute: !1 },
@@ -4254,6 +4267,7 @@ var tn = [
 			route: { attribute: !1 },
 			panel: { attribute: !1 },
 			_info: { state: !0 },
+			_latestHash: { state: !0 },
 			_tab: { state: !0 },
 			_history: { state: !0 },
 			_models: { state: !0 },
@@ -4273,7 +4287,7 @@ var tn = [
 			if (!this._drafting) {
 				this._drafting = !0, this._draftError = null;
 				try {
-					let t = await je(this.hass, e.detail.request, e.detail.model);
+					let t = await Ae(this.hass, e.detail.request, e.detail.model);
 					this._open(t);
 				} catch (e) {
 					this._draftError = V(e);
@@ -4287,7 +4301,7 @@ var tn = [
 			if (t && !this._pending) {
 				this._pending = e.detail.decision, this._decisionError = null;
 				try {
-					this._current = await Me(this.hass, e.detail.decision, t.id, {
+					this._current = await je(this.hass, e.detail.decision, t.id, {
 						decidedIn: this._part,
 						viewsOpened: this._viewsOpened
 					});
@@ -4306,14 +4320,15 @@ var tn = [
 			let t = this._history.items.find((t) => t.id === e.detail.id);
 			t && this._open(t);
 		}, this._onShowFinding = (e) => {
-			this._marks = et($, e.detail.netRefs), this._focus = null, this._go("domain");
+			this._marks = $e($, e.detail.netRefs), this._focus = null, this._go("domain");
 		}, this._onFocusAutomation = (e) => {
 			let { automationId: t, toggle: n } = e.detail;
-			this._focus = n && this._focus === t ? null : t, n || (this._marks = tt, this._go("domain"));
-		}, this._info = { status: "loading" }, this._tab = "request", this._history = { status: "loading" }, this._models = { status: "loading" }, this._current = null, this._part = "description", this._drafting = !1, this._draftError = null, this._pending = null, this._decisionError = null, this._marks = tt, this._focus = null, this._mode = "house";
+			this._focus = n && this._focus === t ? null : t, n || (this._marks = et, this._go("domain"));
+		}, this._info = { status: "loading" }, this._latestHash = null, this._tab = "request", this._history = { status: "loading" }, this._models = { status: "loading" }, this._current = null, this._part = "description", this._drafting = !1, this._draftError = null, this._pending = null, this._decisionError = null, this._marks = et, this._focus = null, this._mode = "house";
 	}
-	willUpdate() {
-		this.hass && !this._requested && (this._requested = !0, this._loadInfo(), this._loadHistory(), this._loadModels());
+	willUpdate(e) {
+		let t = e.get("hass");
+		this.hass && t?.connected === !1 && this.hass.connected === !0 && this._checkBundle(), this.hass && !this._requested && (this._requested = !0, this._loadInfo(), this._loadHistory(), this._loadModels());
 	}
 	async _loadInfo() {
 		this._info = { status: "loading" };
@@ -4322,7 +4337,7 @@ var tn = [
 			this._info = {
 				status: "ready",
 				info: e
-			};
+			}, this._latestHash = e.bundle_hash ?? null;
 		} catch (e) {
 			this._info = {
 				status: "error",
@@ -4330,10 +4345,16 @@ var tn = [
 			};
 		}
 	}
+	async _checkBundle() {
+		try {
+			let e = await this.hass.callWS({ type: "ai_drafts/info" });
+			this._latestHash = e.bundle_hash ?? null;
+		} catch {}
+	}
 	async _loadModels() {
 		let e = ++this._modelsSeq;
 		try {
-			let t = await Ae(this.hass);
+			let t = await ke(this.hass);
 			if (e !== this._modelsSeq) return;
 			this._models = {
 				status: "ready",
@@ -4350,7 +4371,7 @@ var tn = [
 	async _loadHistory() {
 		let e = ++this._historySeq;
 		try {
-			let t = await ke(this.hass);
+			let t = await Oe(this.hass);
 			if (e !== this._historySeq) return;
 			if (this._history = {
 				status: "ready",
@@ -4371,7 +4392,7 @@ var tn = [
 		this._current = e, this._part = "description", this._viewsOpened = [], this._decisionError = null, this._go("proposal");
 	}
 	_go(e) {
-		this._tab = e, this._visit(), e === "request" && (this._loadHistory(), this._loadModels());
+		this._tab = e, this._visit(), e === "request" && (this._checkBundle(), this._loadHistory(), this._loadModels());
 	}
 	_setPart(e) {
 		this._part = e, this._visit();
@@ -4381,8 +4402,11 @@ var tn = [
 		let e = this._tab === "proposal" ? `proposal.${this._part}` : this._tab;
 		this._viewsOpened.includes(e) || (this._viewsOpened = [...this._viewsOpened, e]);
 	}
+	_outdated() {
+		return nn !== null && this._latestHash !== null && this._latestHash !== nn;
+	}
 	render() {
-		let e = Ge(this.hass?.locale?.language ?? this.hass?.language), t = this.hass?.locale?.language ?? this.hass?.language, n = {
+		let e = We(this.hass?.locale?.language ?? this.hass?.language), t = this.hass?.locale?.language ?? this.hass?.language, n = {
 			request: e.tabRequest,
 			proposal: e.tabProposal,
 			domain: e.tabDomain,
@@ -4393,8 +4417,17 @@ var tn = [
         <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
         <div class="title">${e.title}</div>
       </div>
+      ${this._outdated() ? P`<div class="outdated" role="alert">
+            <div class="outdated-text">
+              <strong>${e.outdatedTitle}</strong>
+              <span>${e.outdatedText}</span>
+            </div>
+            <button type="button" class="outdated-button" @click=${() => location.reload()}>
+              ${e.outdatedReload}
+            </button>
+          </div>` : L}
       <div class="tabs" role="tablist">
-        ${tn.map((e) => P`<button
+        ${rn.map((e) => P`<button
             type="button"
             role="tab"
             id="tab-${e}"
@@ -4416,9 +4449,9 @@ var tn = [
         @retry-info=${() => void this._loadInfo()}
         @retry-history=${() => void this._loadHistory()}
         @show-finding=${this._onShowFinding}
-        @mark-example=${() => this._marks = et($, cn)}
+        @mark-example=${() => this._marks = $e($, un)}
         @focus-automation=${this._onFocusAutomation}
-        @clear-marks=${() => this._marks = tt}
+        @clear-marks=${() => this._marks = et}
         @clear-focus=${() => this._focus = null}
         @set-mode=${(e) => this._mode = e.detail.mode}
       >
@@ -4438,7 +4471,7 @@ var tn = [
           .currentId=${this._current?.id ?? null}
           .drafting=${this._drafting}
           .error=${this._draftError}
-          .exampleRequest=${He.request}
+          .exampleRequest=${Ve.request}
         ></ai-drafts-request>
       </div>
       <div class="view" id="view-proposal" role="tabpanel" ?hidden=${this._tab !== "proposal"}>
@@ -4456,9 +4489,9 @@ var tn = [
         <ai-drafts-domain
           .t=${e}
           .language=${t}
-          .house=${Re}
+          .house=${Le}
           .net=${$}
-          .automations=${ln}
+          .automations=${dn}
           .marks=${this._marks}
           .focusId=${this._focus}
           .mode=${this._mode}
@@ -4467,9 +4500,9 @@ var tn = [
       <div class="view" id="view-inventory" role="tabpanel" ?hidden=${this._tab !== "inventory"}>
         <ai-drafts-inventory
           .t=${e}
-          .items=${un}
-          .dependencies=${dn}
-          .stateLabelOf=${(e) => sn.get(e) ?? e}
+          .items=${fn}
+          .dependencies=${pn}
+          .stateLabelOf=${(e) => ln.get(e) ?? e}
         ></ai-drafts-inventory>
       </div>
     `;
@@ -4497,6 +4530,37 @@ var tn = [
     .title {
       font-size: 20px;
       font-weight: 400;
+    }
+    .outdated {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background-color: var(--warning-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .outdated-text {
+      display: flex;
+      flex: 1 1 280px;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 14px;
+    }
+    .outdated-button {
+      flex: none;
+      padding: 8px 16px;
+      font: inherit;
+      font-weight: 500;
+      color: var(--primary-text-color);
+      background-color: var(--card-background-color, var(--primary-background-color));
+      border: 1px solid var(--divider-color);
+      border-radius: var(--ha-border-radius, 4px);
+      cursor: pointer;
+    }
+    .outdated-button:focus-visible {
+      outline: 2px solid var(--primary-text-color);
+      outline-offset: 2px;
     }
     .tabs {
       display: flex;
@@ -4543,4 +4607,4 @@ var tn = [
   `;
 	}
 };
-customElements.define("ai-drafts-panel", fn);
+customElements.define("ai-drafts-panel", mn);

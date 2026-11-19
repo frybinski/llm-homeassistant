@@ -77,6 +77,19 @@ async def test_panel_registered_and_removed(hass: HomeAssistant) -> None:
     assert "ai-drafts" in hass.data[DATA_PANELS]
 
 
+async def test_info_bundle_hash_matches_panel_url(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    await setup_entry(hass, OPENAI_DATA)
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "ai_drafts/info"})
+    response = await client.receive_json()
+    module_url = hass.data[DATA_PANELS]["ai-drafts"].config["_panel_custom"][
+        "module_url"
+    ]
+    assert module_url.endswith(f"?v={response['result']['bundle_hash']}")
+
+
 async def test_bundle_is_served(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
@@ -109,6 +122,7 @@ async def test_info_for_openai_source(
         "version": "0.1.0",
         "model_source": "openai_compatible",
         "model": "llama3.1",
+        "bundle_hash": hashlib.sha256(BUNDLE.read_bytes()).hexdigest()[:12],
     }
     assert API_KEY not in json.dumps(response)
 
@@ -124,6 +138,7 @@ async def test_info_for_ai_task_source(
         "version": "0.1.0",
         "model_source": "ai_task",
         "model": "ai_task.my_model",
+        "bundle_hash": hashlib.sha256(BUNDLE.read_bytes()).hexdigest()[:12],
     }
 
 

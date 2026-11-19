@@ -22,6 +22,8 @@ class AIDraftsData:
     changesets: ChangeSetStore
     journal: Journal
     snapshots: SnapshotStore
+    # Content hash of the panel bundle: the ``v`` of the registered module URL.
+    bundle_hash: str
     # Held while a draft runs; a second request meanwhile is refused as busy.
     draft_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     # Serialises every read-modify-write of automations.yaml (apply and revert).

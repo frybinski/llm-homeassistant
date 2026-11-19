@@ -21,6 +21,7 @@ function errorLead(t: Strings, code: string): string {
   const leads: Record<string, string> = {
     busy: t.errBusy,
     model_error: t.errModel,
+    invalid_model: t.errInvalidModel,
     not_loaded: t.errNotLoaded,
     apply_blocked: t.errApplyBlocked,
     apply_failed: t.errApplyFailed,

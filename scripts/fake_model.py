@@ -3,12 +3,14 @@
 
 It is a tiny OpenAI-compatible server that answers ``POST /v1/chat/completions``
 with canned change sets, chosen by words in the user's request, and
-``GET /v1/models`` with the one model ``fake``. With it the whole
+``GET /v1/models`` with two models, ``fake`` and ``fake-2``, which answer
+alike (so switching models can be tried). With it the whole
 pipeline (context, checks, repair loop, apply, revert) can be exercised in a real
 Home Assistant instance. It says nothing about how a real model behaves.
 
 Run it, then add AI Drafts with the model source "OpenAI-compatible server",
-base URL ``http://127.0.0.1:11435/v1``, model ``fake`` (any name works), no API key::
+base URL ``http://127.0.0.1:11435/v1``, model ``fake`` or ``fake-2`` (any name
+works for drafting), no API key::
 
     .venv/bin/python scripts/fake_model.py [--host 127.0.0.1] [--port 11435]
 
@@ -44,6 +46,9 @@ from typing import Any
 from aiohttp import web
 
 _LOGGER = logging.getLogger("fake_model")
+
+# The models ``GET /v1/models`` lists. All of them answer the same way.
+MODELS = ("fake", "fake-2")
 
 # Present in the user prompt of a repair round, absent in the first one.
 REPAIR_MARKER = "Findings of the checker"
@@ -159,12 +164,13 @@ async def chat_completions(request: web.Request) -> web.Response:
 
 
 async def list_models(request: web.Request) -> web.Response:
-    """Answer ``GET /v1/models`` with one model, ``fake``."""
+    """Answer ``GET /v1/models`` with two models, ``fake`` and ``fake-2``."""
     return web.json_response(
         {
             "object": "list",
             "data": [
-                {"id": "fake", "object": "model", "created": 0, "owned_by": "fake"}
+                {"id": name, "object": "model", "created": 0, "owned_by": "fake"}
+                for name in MODELS
             ],
         }
     )

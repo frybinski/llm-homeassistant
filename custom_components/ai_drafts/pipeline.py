@@ -17,9 +17,11 @@ from .changeset import (
 from .checks.validity import async_run_checks
 from .context import async_build_context
 from .drafting import (
+    USE_DEFAULT,
     MalformedOutputError,
     ModelClient,
     ModelError,
+    UseDefault,
     async_client_from_entry_data,
     build_prompts,
     parse_operations,
@@ -67,19 +69,22 @@ async def async_create_draft(
     request: str,
     *,
     client: ModelClient | None = None,
+    model: str | UseDefault | None = USE_DEFAULT,
 ) -> ChangeSet:
     """Draft a change set for a request, with up to three repair rounds.
 
     Returns the stored change set: ``checked`` when the checks found no error,
     ``failed`` when the repair rounds ran out. Raises DraftBusyError if a draft
     is already running and ModelError if the model could not be used (the failed
-    change set is stored and its id is on the exception).
+    change set is stored and its id is on the exception). ``model`` replaces the
+    configured model for this draft (see ``async_client_from_entry_data``, which
+    raises InvalidModelError for a value that does not fit the source).
     """
     if data.draft_lock.locked():
         raise DraftBusyError("another draft is still running")
     async with data.draft_lock:
         if client is None:
-            client = async_client_from_entry_data(hass, data.entry.data)
+            client = async_client_from_entry_data(hass, data.entry.data, model)
         context = await async_build_context(hass, request)
         return await _run(hass, data, request, client, context)
 

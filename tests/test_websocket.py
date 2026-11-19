@@ -3,22 +3,29 @@
 import asyncio
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
+import aiohttp
+from homeassistant.components import ai_task
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 import pytest
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMocker,
+)
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.ai_drafts.changeset import ChangeSetStatus
 from custom_components.ai_drafts.const import DOMAIN
 from custom_components.ai_drafts.data import AIDraftsData
-from custom_components.ai_drafts.drafting import ModelError
+from custom_components.ai_drafts.drafting import USE_DEFAULT, ModelError
 
 from .common import (
     OPENAI_DATA,
     ScriptedClient,
+    build_house,
     flur_automation,
     make_change_set,
     operations_json,
@@ -26,11 +33,14 @@ from .common import (
 )
 from .test_apply import checked, read_file, start
 
+MODELS_URL = "http://model.test/v1/models"
+AI_TASK_DATA = {"model_source": "ai_task", "ai_task_entity": "ai_task.cloud"}
 PIPELINE_CLIENT = "custom_components.ai_drafts.pipeline.async_client_from_entry_data"
 REQUEST = "Schalte das Flurlicht bei Bewegung nach Sonnenuntergang für 3 Minuten ein"
 API_KEY = OPENAI_DATA["api_key"]
 
 NEW_COMMANDS = [
+    ("ai_drafts/models", {}),
     ("ai_drafts/draft", {"request": "x"}),
     ("ai_drafts/changesets/get", {"change_set_id": "cs_x"}),
     ("ai_drafts/changesets/apply", {"change_set_id": "cs_x"}),
@@ -112,6 +122,158 @@ async def test_no_home_assistant_services_are_registered(
     ]
 
 
+# --- models ---------------------------------------------------------------------
+
+
+async def test_models_of_the_server_source(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    aioclient_mock: AiohttpClientMocker,
+    data: AIDraftsData,
+) -> None:
+    aioclient_mock.get(MODELS_URL, json={"data": [{"id": "a"}, {"id": "test-model"}]})
+    client = await hass_ws_client(hass)
+    response = await call(client, "ai_drafts/models")
+    assert response["success"], response
+    assert response["result"] == {
+        "model_source": "openai_compatible",
+        "default": "test-model",
+        "models": [
+            {"id": "a", "label": "a"},
+            {"id": "test-model", "label": "test-model"},
+        ],
+        "error": None,
+    }
+    assert aioclient_mock.mock_calls[0][3]["Authorization"] == f"Bearer {API_KEY}"
+    assert API_KEY not in json.dumps(response)
+
+
+async def test_models_keeps_the_configured_model_when_the_server_does_not_list_it(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    aioclient_mock: AiohttpClientMocker,
+    data: AIDraftsData,
+) -> None:
+    aioclient_mock.get(MODELS_URL, json={"data": [{"id": "a"}]})
+    client = await hass_ws_client(hass)
+    result = (await call(client, "ai_drafts/models"))["result"]
+    assert [m["id"] for m in result["models"]] == ["test-model", "a"]
+    assert result["default"] == "test-model"
+    assert result["error"] is None
+
+
+@pytest.mark.parametrize(
+    ("mock_kwargs", "reason"),
+    [
+        ({"exc": aiohttp.ClientConnectionError("refused")}, "could not reach"),
+        ({"status": 500, "text": "boom"}, "HTTP 500"),
+        ({"status": 401}, "HTTP 401"),
+        ({"status": 404}, "HTTP 404"),
+        ({"text": "<html></html>"}, "did not answer with a model list"),
+    ],
+)
+async def test_models_answers_with_the_configured_model_when_the_server_is_down(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    aioclient_mock: AiohttpClientMocker,
+    data: AIDraftsData,
+    mock_kwargs: dict[str, Any],
+    reason: str,
+) -> None:
+    aioclient_mock.get(MODELS_URL, **mock_kwargs)
+    client = await hass_ws_client(hass)
+    response = await call(client, "ai_drafts/models")
+    assert response["success"], response
+    result = response["result"]
+    assert result["models"] == [{"id": "test-model", "label": "test-model"}]
+    assert result["default"] == "test-model"
+    assert reason in result["error"]
+    assert API_KEY not in json.dumps(response)
+
+
+class GenerateDataEntity(ai_task.AITaskEntity):
+    """An AI Task entity that can generate data."""
+
+    _attr_supported_features = ai_task.AITaskEntityFeature.GENERATE_DATA
+
+    def __init__(self, object_id: str, name: str, features: Any = None) -> None:
+        self.entity_id = f"ai_task.{object_id}"
+        self._attr_unique_id = object_id
+        self._attr_name = name
+        if features is not None:
+            self._attr_supported_features = features
+
+
+async def _add_ai_task_entities(hass: HomeAssistant) -> None:
+    """Make three AI Task entities visible, without setting up ai_task itself.
+
+    Setting up the real integration pulls in conversation and more; the command
+    only reads the component's entity list and the states.
+    """
+    entities = [
+        GenerateDataEntity("local", "Local model"),
+        GenerateDataEntity("cloud", "Cloud model"),
+        GenerateDataEntity(
+            "pictures", "Only pictures", ai_task.AITaskEntityFeature.GENERATE_IMAGE
+        ),
+    ]
+    for entity in entities:
+        hass.states.async_set(
+            entity.entity_id, "unknown", {"friendly_name": entity.name}
+        )
+    hass.config.components.add("ai_task")
+    hass.data[ai_task.DATA_COMPONENT] = SimpleNamespace(entities=entities)
+
+
+async def test_models_of_the_ai_task_source(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    await _add_ai_task_entities(hass)
+    await setup_entry(hass, AI_TASK_DATA)
+    client = await hass_ws_client(hass)
+    response = await call(client, "ai_drafts/models")
+    assert response["success"], response
+    result = response["result"]
+    assert result["model_source"] == "ai_task"
+    assert result["default"] == "ai_task.cloud"
+    assert result["error"] is None
+    # The preferred entity first, then the entities that can generate data
+    # (not the one that only makes pictures), by friendly name.
+    assert [(m["id"], m["label"]) for m in result["models"]] == [
+        (None, "ai_task (preferred entity)"),
+        ("ai_task.cloud", "Cloud model"),
+        ("ai_task.local", "Local model"),
+    ]
+
+
+async def test_models_of_the_ai_task_source_with_the_preferred_entity(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    await _add_ai_task_entities(hass)
+    await setup_entry(hass, {"model_source": "ai_task", "ai_task_entity": None})
+    client = await hass_ws_client(hass)
+    result = (await call(client, "ai_drafts/models"))["result"]
+    assert result["default"] is None
+    assert [m["id"] for m in result["models"]] == [
+        None,
+        "ai_task.cloud",
+        "ai_task.local",
+    ]
+
+
+async def test_models_of_the_ai_task_source_without_ai_task_loaded(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    await setup_entry(hass, AI_TASK_DATA)
+    client = await hass_ws_client(hass)
+    response = await call(client, "ai_drafts/models")
+    assert response["success"], response
+    result = response["result"]
+    assert "not loaded" in result["error"]
+    assert [m["id"] for m in result["models"]] == [None, "ai_task.cloud"]
+    assert result["default"] == "ai_task.cloud"
+
+
 # --- draft ----------------------------------------------------------------------
 
 
@@ -130,6 +292,100 @@ async def test_draft_returns_the_checked_change_set(
     assert result["operations"][0]["after"]["alias"] == "Flurlicht bei Bewegung"
     assert data.changesets.get(result["id"]) is not None
     assert API_KEY not in json.dumps(response)
+
+
+async def test_draft_without_model_uses_the_configured_one(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, data: AIDraftsData
+) -> None:
+    client = await hass_ws_client(hass)
+    with patch(
+        PIPELINE_CLIENT, return_value=ScriptedClient(operations_json(flur_automation()))
+    ) as factory:
+        response = await call(client, "ai_drafts/draft", request=REQUEST)
+    assert response["success"], response
+    assert factory.call_args.args[2] is USE_DEFAULT
+
+
+async def test_draft_with_model_uses_it(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    aioclient_mock: AiohttpClientMocker,
+    data: AIDraftsData,
+) -> None:
+    """Through the real client: the server is asked for the model that was chosen."""
+    aioclient_mock.post(
+        "http://model.test/v1/chat/completions",
+        json={
+            "choices": [{"message": {"content": operations_json(flur_automation())}}]
+        },
+    )
+    client = await hass_ws_client(hass)
+    response = await call(client, "ai_drafts/draft", request=REQUEST, model="fake-2")
+    assert response["success"], response
+    assert response["result"]["model"] == "fake-2"
+    assert aioclient_mock.mock_calls[0][2]["model"] == "fake-2"
+    assert data.changesets.get(response["result"]["id"]).model == "fake-2"
+    created = [
+        e
+        for e in data.journal.list(response["result"]["id"])
+        if e["event"] == "created"
+    ]
+    assert created[0]["data"]["model"] == "fake-2"
+
+    # Without it, the next draft uses the configured model again.
+    response = await call(client, "ai_drafts/draft", request=REQUEST)
+    assert response["result"]["model"] == "test-model"
+    assert aioclient_mock.mock_calls[1][2]["model"] == "test-model"
+
+
+async def test_draft_with_model_for_the_ai_task_source(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+) -> None:
+    await build_house(hass)
+    await setup_entry(hass, AI_TASK_DATA)
+    client = await hass_ws_client(hass)
+    seen: list[str | None] = []
+
+    async def generate(self: Any, system: str, user: str) -> Any:
+        seen.append(self._entity_id)
+        return operations_json(flur_automation())
+
+    with patch(
+        "custom_components.ai_drafts.drafting.AITaskClient.async_generate", generate
+    ):
+        explicit = await call(
+            client, "ai_drafts/draft", request=REQUEST, model="ai_task.local"
+        )
+        preferred = await call(client, "ai_drafts/draft", request=REQUEST, model=None)
+        default = await call(client, "ai_drafts/draft", request=REQUEST)
+    assert seen == ["ai_task.local", None, "ai_task.cloud"]
+    assert explicit["result"]["model"] == "ai_task.local"
+    assert preferred["result"]["model"] == "ai_task (preferred entity)"
+    assert default["result"]["model"] == "ai_task.cloud"
+
+
+@pytest.mark.parametrize("bad", ["gpt-4o", "light.kitchen", "ai_task.", "ai_task.A B"])
+async def test_draft_rejects_a_model_that_is_no_ai_task_entity(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, bad: str
+) -> None:
+    entry = await setup_entry(hass, AI_TASK_DATA)
+    client = await hass_ws_client(hass)
+    response = await call(client, "ai_drafts/draft", request=REQUEST, model=bad)
+    assert not response["success"]
+    assert response["error"]["code"] == "invalid_model"
+    assert "not an AI Task entity id" in response["error"]["message"]
+    assert entry.runtime_data.changesets.list() == []
+
+
+async def test_draft_rejects_no_model_name_for_the_server_source(
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, data: AIDraftsData
+) -> None:
+    client = await hass_ws_client(hass)
+    null = await call(client, "ai_drafts/draft", request=REQUEST, model=None)
+    assert null["error"]["code"] == "invalid_model"
+    blank = await call(client, "ai_drafts/draft", request=REQUEST, model="  ")
+    assert blank["error"]["code"] == "invalid_format"
+    assert data.changesets.list() == []
 
 
 async def test_draft_repairs_and_reports_the_rounds(

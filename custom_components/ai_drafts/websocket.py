@@ -19,6 +19,8 @@ from .changeset import (
 )
 from .const import (
     CONF_AI_TASK_ENTITY,
+    CONF_API_KEY,
+    CONF_BASE_URL,
     CONF_MODEL,
     CONF_MODEL_SOURCE,
     DOMAIN,
@@ -31,9 +33,17 @@ from .const import (
     WS_TYPE_DRAFT,
     WS_TYPE_INFO,
     WS_TYPE_JOURNAL_LIST,
+    WS_TYPE_MODELS,
 )
 from .data import AIDraftsData
-from .drafting import ModelError
+from .drafting import (
+    USE_DEFAULT,
+    InvalidModelError,
+    ModelError,
+    ModelListError,
+    async_list_ai_task_entities,
+    async_list_models,
+)
 from .journal import EVENT_DISCARDED
 from .pipeline import DraftBusyError, async_create_draft
 
@@ -45,6 +55,7 @@ ERR_APPLY_FAILED = "apply_failed"
 ERR_REVERT_REFUSED = "revert_refused"
 ERR_BUSY = "busy"
 ERR_MODEL = "model_error"
+ERR_INVALID_MODEL = "invalid_model"
 
 # Sent by the panel with a decision: which view was active, which were opened.
 DECISION_FIELDS = {
@@ -58,6 +69,7 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
     """Register all commands. Commands cannot be unregistered, so do this once."""
     websocket_api.async_register_command(hass, ws_info)
     websocket_api.async_register_command(hass, ws_changesets_list)
+    websocket_api.async_register_command(hass, ws_models)
     websocket_api.async_register_command(hass, ws_draft)
     websocket_api.async_register_command(hass, ws_changesets_get)
     websocket_api.async_register_command(hass, ws_changesets_apply)
@@ -150,10 +162,68 @@ def _send_change_set_error(
     connection.send_error(msg_id, code, str(err))
 
 
+@websocket_api.websocket_command({vol.Required("type"): WS_TYPE_MODELS})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_models(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return the models the configured source offers and the configured default.
+
+    ``models`` is a list of ``{"id", "label"}``; an ``id`` of ``None`` is the
+    preferred AI Task entity. ``error`` says why the list is incomplete, or is
+    ``None``. This command does not fail because the server is down: it then
+    answers with the configured model alone.
+    """
+    if (entry := _get_loaded_entry(hass, connection, msg["id"])) is None:
+        return
+    source = entry.data.get(CONF_MODEL_SOURCE)
+    error: str | None = None
+    models: list[dict[str, str | None]]
+    if source == MODEL_SOURCE_AI_TASK:
+        default = entry.data.get(CONF_AI_TASK_ENTITY) or None
+        entities = async_list_ai_task_entities(hass)
+        if "ai_task" not in hass.config.components:
+            error = "the AI Task integration is not loaded"
+        models = [{"id": None, "label": "ai_task (preferred entity)"}]
+        models += [{"id": eid, "label": label} for eid, label in entities]
+        if default is not None and default not in {eid for eid, _ in entities}:
+            # Configured, but not (or no longer) offered: keep it selectable.
+            models.append({"id": default, "label": default})
+    else:
+        default = entry.data.get(CONF_MODEL)
+        try:
+            listed = await async_list_models(
+                hass, entry.data[CONF_BASE_URL], entry.data.get(CONF_API_KEY) or None
+            )
+        except ModelListError as err:
+            error = str(err)
+            listed = []
+        models = [{"id": name, "label": name} for name in listed]
+        if default and default not in listed:
+            models.insert(0, {"id": default, "label": default})
+    connection.send_result(
+        msg["id"],
+        {
+            "model_source": source,
+            "default": default,
+            "models": models,
+            "error": error,
+        },
+    )
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): WS_TYPE_DRAFT,
         vol.Required("request"): vol.All(str, vol.Strip, vol.Length(min=1, max=4000)),
+        # Absent: the configured model. For an AI Task source, null is the
+        # preferred entity.
+        vol.Optional("model"): vol.Any(
+            None, vol.All(str, vol.Strip, vol.Length(min=1, max=200))
+        ),
     }
 )
 @websocket_api.require_admin
@@ -167,7 +237,14 @@ async def ws_draft(
     if (entry := _get_loaded_entry(hass, connection, msg["id"])) is None:
         return
     try:
-        change_set = await async_create_draft(hass, entry.runtime_data, msg["request"])
+        change_set = await async_create_draft(
+            hass,
+            entry.runtime_data,
+            msg["request"],
+            model=msg.get("model", USE_DEFAULT),
+        )
+    except InvalidModelError as err:
+        connection.send_error(msg["id"], ERR_INVALID_MODEL, str(err))
     except DraftBusyError:
         connection.send_error(msg["id"], ERR_BUSY, "Another draft is still running")
     except ModelError as err:

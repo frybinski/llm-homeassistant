@@ -116,3 +116,13 @@ async def test_handler_answers_a_chat_completion() -> None:
     assert response.status == 200
     assert body["model"] == "x"
     assert body["choices"][0]["message"]["role"] == "assistant"
+
+
+async def test_models_list_has_two_models_the_pipeline_can_read(
+    hass: HomeAssistant,
+) -> None:
+    fake = load_fake_model()
+    response = await fake.list_models(FakeRequest(None))
+    body = json.loads(response.text)
+    assert [m["id"] for m in body["data"]] == ["fake", "fake-2"]
+    assert fake.MODELS == ("fake", "fake-2")

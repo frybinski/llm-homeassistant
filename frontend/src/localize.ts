@@ -35,6 +35,15 @@ const EN = {
   historyLoading: "Loading history…",
   historyError: "The history could not be loaded.",
   historyOpenHint: "Click an entry to open it in the proposal view.",
+  modelLabel: "Model for this draft",
+  modelDefaultMark: "default",
+  modelPreferred: "Home Assistant's preferred AI Task entity",
+  modelsLoading: "Loading models…",
+  modelsError: "The models could not be loaded.",
+  modelsUnavailable: "The model list is not available",
+  modelNote:
+    "Applies to the drafts you create from now on, as long as this page is open. The default is set in the integration settings (Reconfigure).",
+  historyModel: "Model",
   currentBadge: "Open",
   roundsLabel: (n: number) => `${n} repair ${n === 1 ? "round" : "rounds"}`,
   statusDraft: "Draft",
@@ -49,6 +58,7 @@ const EN = {
   errBusy: "Another draft is still running. Try again when it has finished.",
   errModel:
     "The model could not be reached or gave no usable answer. The failed proposal is stored and appears in the history.",
+  errInvalidModel: "The chosen model cannot be used with the configured model source.",
   errNotLoaded:
     "AI Drafts is not set up. Add the integration under Settings, Devices and services.",
   errUnknown: "Something unexpected went wrong.",
@@ -261,6 +271,15 @@ const DE: Strings = {
   historyLoading: "Verlauf lädt…",
   historyError: "Der Verlauf konnte nicht geladen werden.",
   historyOpenHint: "Ein Klick auf einen Eintrag öffnet ihn in der Ansicht „Vorschlag und Befunde“.",
+  modelLabel: "Modell für diesen Entwurf",
+  modelDefaultMark: "Standard",
+  modelPreferred: "Bevorzugte AI-Task-Entität von Home Assistant",
+  modelsLoading: "Modelle werden geladen…",
+  modelsError: "Die Modelle konnten nicht geladen werden.",
+  modelsUnavailable: "Die Modellliste ist nicht verfügbar",
+  modelNote:
+    "Gilt für die Entwürfe, die du ab jetzt erstellst, solange diese Seite geöffnet ist. Der Standard wird in den Einstellungen der Integration festgelegt (Neu konfigurieren).",
+  historyModel: "Modell",
   currentBadge: "Geöffnet",
   roundsLabel: (n: number) => `${n} ${n === 1 ? "Reparaturrunde" : "Reparaturrunden"}`,
   statusDraft: "Entwurf",
@@ -274,6 +293,8 @@ const DE: Strings = {
   errBusy: "Es läuft noch ein anderer Entwurf. Versuche es erneut, wenn er fertig ist.",
   errModel:
     "Das Modell war nicht erreichbar oder hat keine brauchbare Antwort geliefert. Der fehlgeschlagene Vorschlag ist gespeichert und steht im Verlauf.",
+  errInvalidModel:
+    "Das gewählte Modell passt nicht zur eingestellten Modellquelle.",
   errNotLoaded:
     "AI Drafts ist nicht eingerichtet. Füge die Integration unter Einstellungen, Geräte und Dienste hinzu.",
   errUnknown: "Es ist etwas Unerwartetes schiefgegangen.",

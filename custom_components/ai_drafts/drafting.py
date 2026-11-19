@@ -16,6 +16,7 @@ import re
 from typing import TYPE_CHECKING, Any, Final, Protocol
 
 from aiohttp import ClientError
+from homeassistant.core import callback, valid_entity_id
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -118,6 +119,23 @@ BASE_URL_HINT: Final = (
     "ends in /v1 (Ollama, LM Studio, OpenAI); for Open WebUI it is the server "
     "address followed by /api."
 )
+
+
+class InvalidModelError(Exception):
+    """A model asked for per draft cannot be used with the configured source."""
+
+
+class UseDefault:
+    """Type of :data:`USE_DEFAULT`."""
+
+    def __repr__(self) -> str:
+        """Return the constant's name."""
+        return "USE_DEFAULT"
+
+
+# "No model given": the configured one is used. ``None`` is a value of its own for
+# an AI Task source: Home Assistant's preferred entity.
+USE_DEFAULT: Final = UseDefault()
 
 
 class ModelListError(Exception):
@@ -355,6 +373,32 @@ class OpenAICompatibleClient:
         return content
 
 
+def _model_entries(parsed: Any) -> list[Any] | None:
+    """Return the list of model entries in a decoded ``/models`` answer, or None.
+
+    Accepted: ``{"data": [...]}`` (OpenAI), ``{"models": [...]}`` (Ollama style)
+    and a bare list.
+    """
+    if isinstance(parsed, list):
+        return parsed
+    if isinstance(parsed, dict):
+        for key in ("data", "models"):
+            if isinstance(parsed.get(key), list):
+                return parsed[key]
+    return None
+
+
+def _model_id(entry: Any) -> str | None:
+    """Return the id of a model entry: ``id``, else ``model``, else ``name``."""
+    if not isinstance(entry, dict):
+        return None
+    for key in ("id", "model", "name"):
+        value = entry.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
 async def async_list_models(
     hass: HomeAssistant, base_url: str, api_key: str | None = None
 ) -> list[str]:
@@ -384,19 +428,47 @@ async def async_list_models(
     if not 200 <= status < 300:
         raise CannotConnectError(f"{url} answered HTTP {status}")
     try:
-        entries = json.loads(body)["data"]
-        if not isinstance(entries, list):
-            raise TypeError
-    except ValueError, KeyError, TypeError:
-        raise NotOpenAICompatibleError(
-            f"{url} did not answer with a model list"
-        ) from None
+        entries = _model_entries(json.loads(body))
+    except ValueError:
+        entries = None
+    if entries is None:
+        raise NotOpenAICompatibleError(f"{url} did not answer with a model list")
     models: list[str] = []
     for entry in entries:
-        model_id = entry.get("id") if isinstance(entry, dict) else None
-        if isinstance(model_id, str) and model_id and model_id not in models:
+        model_id = _model_id(entry)
+        if model_id is not None and model_id not in models:
             models.append(model_id)
     return models
+
+
+@callback
+def async_list_ai_task_entities(hass: HomeAssistant) -> list[tuple[str, str]]:
+    """Return (entity id, label) of the AI Task entities that generate data.
+
+    Empty if the AI Task integration is not loaded. The label is the friendly
+    name, or the entity id if the entity has none.
+    """
+    if "ai_task" not in hass.config.components:
+        return []
+    # Imported late: ai_task is only an after_dependency and pulls in a lot.
+    from homeassistant.components import ai_task
+
+    component = hass.data.get(ai_task.DATA_COMPONENT)
+    if component is None:
+        return []
+    found: list[tuple[str, str]] = []
+    for entity in component.entities:
+        if ai_task.AITaskEntityFeature.GENERATE_DATA not in entity.supported_features:
+            continue
+        state = hass.states.get(entity.entity_id)
+        name = state.attributes.get("friendly_name") if state else None
+        found.append(
+            (
+                entity.entity_id,
+                name if isinstance(name, str) and name else entity.entity_id,
+            )
+        )
+    return sorted(found, key=lambda item: (item[1].casefold(), item[0]))
 
 
 def build_ai_task_structure() -> vol.Schema:
@@ -470,17 +542,36 @@ class AITaskClient:
 
 
 def async_client_from_entry_data(
-    hass: HomeAssistant, data: Mapping[str, Any]
+    hass: HomeAssistant,
+    data: Mapping[str, Any],
+    model: str | UseDefault | None = USE_DEFAULT,
 ) -> ModelClient:
-    """Create the client that the config entry data asks for."""
+    """Create the client that the config entry data asks for.
+
+    ``model`` replaces the configured model for this client only: a model name
+    for the server source, an ``ai_task.`` entity id (or ``None`` for the
+    preferred entity) for the AI Task source. Raises InvalidModelError if it does
+    not fit the source.
+    """
     source = data.get(CONF_MODEL_SOURCE)
     if source == MODEL_SOURCE_AI_TASK:
-        return AITaskClient(hass, data.get(CONF_AI_TASK_ENTITY) or None)
+        entity_id = data.get(CONF_AI_TASK_ENTITY) or None
+        if not isinstance(model, UseDefault):
+            if model is not None and not (
+                model.startswith("ai_task.") and valid_entity_id(model)
+            ):
+                raise InvalidModelError(
+                    f"{model!r} is not an AI Task entity id (ai_task.<name>)"
+                )
+            entity_id = model
+        return AITaskClient(hass, entity_id)
     if source == MODEL_SOURCE_OPENAI_COMPATIBLE:
+        name = data[CONF_MODEL]
+        if not isinstance(model, UseDefault):
+            if not model:
+                raise InvalidModelError("a model name is required for this source")
+            name = model
         return OpenAICompatibleClient(
-            hass,
-            data[CONF_BASE_URL],
-            data[CONF_MODEL],
-            data.get(CONF_API_KEY) or None,
+            hass, data[CONF_BASE_URL], name, data.get(CONF_API_KEY) or None
         )
     raise ModelError(f"unknown model source {source!r}")

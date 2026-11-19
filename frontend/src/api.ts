@@ -1,6 +1,6 @@
 /** The WebSocket commands of the backend (PLAN.md section 14), one function each. */
 import type { ChangeSet } from "./model";
-import type { HomeAssistant } from "./types";
+import type { AIDraftsModels, HomeAssistant } from "./types";
 import type { Decision } from "./logic/changeset-actions";
 
 /** An error answer of a command, or any other failure of the call. */
@@ -37,8 +37,19 @@ async function call<T>(hass: HomeAssistant, msg: { type: string; [key: string]: 
 export const listChangeSets = (hass: HomeAssistant) =>
   call<ChangeSet[]>(hass, { type: "ai_drafts/changesets/list" });
 
-export const createDraft = (hass: HomeAssistant, request: string) =>
-  call<ChangeSet>(hass, { type: "ai_drafts/draft", request });
+export const listModels = (hass: HomeAssistant) =>
+  call<AIDraftsModels>(hass, { type: "ai_drafts/models" });
+
+/**
+ * `model` undefined: the configured model. Otherwise a model name (server source)
+ * or an entity id (AI Task source); null is the preferred AI Task entity.
+ */
+export const createDraft = (hass: HomeAssistant, request: string, model?: string | null) =>
+  call<ChangeSet>(hass, {
+    type: "ai_drafts/draft",
+    request,
+    ...(model === undefined ? {} : { model }),
+  });
 
 export interface DecisionContext {
   /** The part of the proposal view that was active at the click. */

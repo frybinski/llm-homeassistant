@@ -30,9 +30,11 @@ from custom_components.ai_drafts.context import (
     DraftContext,
 )
 from custom_components.ai_drafts.drafting import (
+    USE_DEFAULT,
     AITaskClient,
     CannotConnectError,
     InvalidAuthError,
+    InvalidModelError,
     MalformedOutputError,
     ModelError,
     NotOpenAICompatibleError,
@@ -329,7 +331,9 @@ async def test_list_models_without_key_sends_no_authorization(
         ({"text": "not json"}, NotOpenAICompatibleError),
         ({"json": {"object": "list"}}, NotOpenAICompatibleError),
         ({"json": {"data": {}}}, NotOpenAICompatibleError),
-        ({"json": [1]}, NotOpenAICompatibleError),
+        ({"json": {"models": "x"}}, NotOpenAICompatibleError),
+        ({"json": "x"}, NotOpenAICompatibleError),
+        ({"json": 3}, NotOpenAICompatibleError),
     ],
 )
 async def test_list_models_errors_never_contain_the_key(
@@ -356,6 +360,34 @@ async def test_list_models_timeout_is_cannot_connect(
         pytest.raises(CannotConnectError, match="within"),
     ):
         await async_list_models(hass, "http://model.test/v1")
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected"),
+    [
+        ({"data": [{"id": "a"}, {"id": "b"}]}, ["a", "b"]),
+        ({"models": [{"id": "a"}, {"id": "b"}]}, ["a", "b"]),
+        ([{"id": "a"}, {"id": "b"}], ["a", "b"]),
+        ([], []),
+        ({"models": []}, []),
+        # The id is taken from id, else model, else name.
+        ({"models": [{"model": "m", "name": "n"}]}, ["m"]),
+        ({"models": [{"name": "n"}]}, ["n"]),
+        ({"data": [{"id": "i", "model": "m", "name": "n"}]}, ["i"]),
+        ({"data": [{"id": "", "name": "n"}, {"id": 5, "model": "m"}]}, ["n", "m"]),
+        # "data" wins over "models" when both are lists; junk entries are skipped.
+        ({"data": [{"id": "a"}], "models": [{"id": "b"}]}, ["a"]),
+        ([{"id": "a"}, 1, "x", {"other": 1}, {"id": "a"}], ["a"]),
+    ],
+)
+async def test_list_models_accepts_the_common_shapes(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    answer: Any,
+    expected: list[str],
+) -> None:
+    aioclient_mock.get(MODELS_URL, json=answer)
+    assert await async_list_models(hass, "http://model.test/v1") == expected
 
 
 def test_models_timeout_is_15_seconds() -> None:
@@ -553,3 +585,45 @@ async def test_client_chosen_from_entry_data(hass: HomeAssistant) -> None:
     assert isinstance(ai_task, AITaskClient)
     with pytest.raises(ModelError, match="unknown model source"):
         async_client_from_entry_data(hass, {"model_source": "carrier pigeon"})
+
+
+async def test_client_model_override_for_the_server_source(
+    hass: HomeAssistant,
+) -> None:
+    client = async_client_from_entry_data(hass, OPENAI_DATA, "other-model")
+    assert isinstance(client, OpenAICompatibleClient)
+    assert client.name == "other-model"
+    assert async_client_from_entry_data(hass, OPENAI_DATA).name == "test-model"
+    for bad in (None, ""):
+        with pytest.raises(InvalidModelError):
+            async_client_from_entry_data(hass, OPENAI_DATA, bad)
+
+
+@pytest.mark.parametrize(
+    ("data", "model", "name"),
+    [
+        ({"ai_task_entity": "ai_task.a"}, USE_DEFAULT, "ai_task.a"),
+        ({"ai_task_entity": "ai_task.a"}, "ai_task.b", "ai_task.b"),
+        ({"ai_task_entity": None}, "ai_task.b", "ai_task.b"),
+        # None is a choice: the preferred entity, whatever the entry holds.
+        ({"ai_task_entity": "ai_task.a"}, None, "ai_task (preferred entity)"),
+    ],
+)
+async def test_client_model_override_for_the_ai_task_source(
+    hass: HomeAssistant, data: dict[str, Any], model: Any, name: str
+) -> None:
+    client = async_client_from_entry_data(
+        hass, {"model_source": "ai_task", **data}, model
+    )
+    assert isinstance(client, AITaskClient)
+    assert client.name == name
+
+
+@pytest.mark.parametrize(
+    "bad", ["light.kitchen", "ai_task", "ai_task.", "ai_task.Bad Name", "gpt-4o"]
+)
+async def test_client_rejects_a_model_that_is_no_ai_task_entity(
+    hass: HomeAssistant, bad: str
+) -> None:
+    with pytest.raises(InvalidModelError, match="not an AI Task entity id"):
+        async_client_from_entry_data(hass, {"model_source": "ai_task"}, bad)

@@ -68,7 +68,7 @@ def _model_schema(models: list[str]) -> vol.Schema:
         field = selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=models,
-                custom_value=True,
+                custom_value=False,
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
         )
@@ -192,4 +192,5 @@ class AIDraftsConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=self.add_suggested_values_to_schema(
                 _model_schema(self._models), self._current
             ),
+            description_placeholders={"count": str(len(self._models))},
         )

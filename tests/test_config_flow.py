@@ -7,7 +7,7 @@ from unittest.mock import patch
 import aiohttp
 from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 import pytest
 from pytest_homeassistant_custom_component.test_util.aiohttp import (
     AiohttpClientMocker,
@@ -125,12 +125,19 @@ async def test_model_step_offers_the_servers_models(
     )
     selector = _model_field_selector(result)
     assert selector.config["options"] == ["llama3.1", "qwen3"]
-    assert selector.config["custom_value"] is True
-    # A model that is not in the list is accepted.
+    # A plain dropdown: no free text, so it reads as a list of what is there.
+    assert selector.config["custom_value"] is False
+    assert selector.config["mode"] == "dropdown"
+    assert result["description_placeholders"] == {"count": "2"}
+    # A model that is not in the list is refused.
+    with pytest.raises(InvalidData):
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"model": "my-own-model"}
+        )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"model": "my-own-model"}
+        result["flow_id"], {"model": "qwen3"}
     )
-    assert result["data"]["model"] == "my-own-model"
+    assert result["data"]["model"] == "qwen3"
 
 
 async def test_model_step_is_a_text_field_for_an_empty_list(
@@ -144,6 +151,7 @@ async def test_model_step_is_a_text_field_for_an_empty_list(
     assert result["step_id"] == "openai_model"
     selector = _model_field_selector(result)
     assert type(selector).__name__ == "TextSelector"
+    assert result["description_placeholders"] == {"count": "0"}
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"model": "typed"}
     )
@@ -161,9 +169,10 @@ async def test_model_step_is_a_text_field_for_an_empty_list(
         ({"status": 404, "text": "nope"}, "not_openai_compatible"),
         ({"status": 405, "text": "Method Not Allowed"}, "not_openai_compatible"),
         ({"text": "<html>hello</html>"}, "not_openai_compatible"),
-        ({"json": {"models": []}}, "not_openai_compatible"),
+        ({"json": {"models": "x"}}, "not_openai_compatible"),
         ({"json": {"data": "x"}}, "not_openai_compatible"),
-        ({"json": []}, "not_openai_compatible"),
+        ({"json": {"object": "list"}}, "not_openai_compatible"),
+        ({"json": "x"}, "not_openai_compatible"),
     ],
 )
 async def test_connection_test_maps_errors(

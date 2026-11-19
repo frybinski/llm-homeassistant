@@ -31,6 +31,7 @@ PANEL_STATIC_URL: Final = "/ai_drafts_static"
 # WebSocket command types.
 WS_TYPE_INFO: Final = f"{DOMAIN}/info"
 WS_TYPE_CHANGESETS_LIST: Final = f"{DOMAIN}/changesets/list"
+WS_TYPE_MODELS: Final = f"{DOMAIN}/models"
 WS_TYPE_DRAFT: Final = f"{DOMAIN}/draft"
 WS_TYPE_CHANGESETS_GET: Final = f"{DOMAIN}/changesets/get"
 WS_TYPE_CHANGESETS_APPLY: Final = f"{DOMAIN}/changesets/apply"

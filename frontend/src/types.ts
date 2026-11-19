@@ -21,3 +21,19 @@ export interface AIDraftsInfo {
   model_source: "ai_task" | "openai_compatible" | null;
   model: string | null;
 }
+
+/** One entry of the model selector. `id` null is the preferred AI Task entity. */
+export interface ModelOption {
+  id: string | null;
+  label: string;
+}
+
+/** Result of the `ai_drafts/models` WebSocket command. */
+export interface AIDraftsModels {
+  model_source: "ai_task" | "openai_compatible" | null;
+  /** The configured model (server source) or entity (AI Task source); null is the preferred entity. */
+  default: string | null;
+  models: ModelOption[];
+  /** Why the list is incomplete, or null. */
+  error: string | null;
+}

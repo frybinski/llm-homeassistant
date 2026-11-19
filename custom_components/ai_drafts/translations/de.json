@@ -41,7 +41,7 @@
       },
       "openai_model": {
         "title": "Modell wählen",
-        "description": "**Daten, die Ihre Installation verlassen:** Bei jeder Anfrage sendet AI Drafts Ihren Anfragetext zusammen mit Namen, IDs und Zuständen der relevanten Entitäten, Geräte und Bereiche sowie die bestehenden Automationen an den Server unter der folgenden Adresse. Steht dieser Server in Ihrem eigenen Netzwerk, bleiben die Daten dort. Handelt es sich um einen Cloud-Dienst, werden sie über das Internet an diesen Anbieter gesendet.\n\nDer Server hat geantwortet. Wählen Sie eines seiner Modelle oder geben Sie einen Namen ein, der nicht in der Liste steht. Listet der Server keine Modelle auf, geben Sie den Namen ein.",
+        "description": "**Daten, die Ihre Installation verlassen:** Bei jeder Anfrage sendet AI Drafts Ihren Anfragetext zusammen mit Namen, IDs und Zuständen der relevanten Entitäten, Geräte und Bereiche sowie die bestehenden Automationen an den Server unter der folgenden Adresse. Steht dieser Server in Ihrem eigenen Netzwerk, bleiben die Daten dort. Handelt es sich um einen Cloud-Dienst, werden sie über das Internet an diesen Anbieter gesendet.\n\nVom Server gemeldete Modelle: {count}. Wenn es welche gibt, wählen Sie eines aus der Liste. Wenn es keine gibt, geben Sie stattdessen den Namen des Modells ein.",
         "data": {
           "model": "Modell"
         },

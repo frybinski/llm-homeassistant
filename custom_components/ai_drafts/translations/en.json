@@ -41,7 +41,7 @@
       },
       "openai_model": {
         "title": "Choose the model",
-        "description": "**Data that leaves your installation:** with every request, AI Drafts sends your request text together with the names, IDs and states of the entities, devices and areas it considers relevant, and the existing automations, to the server at the address below. If that server is on your own network, the data stays there. If it is a cloud service, the data is sent over the internet to that provider.\n\nThe server answered. Pick one of its models, or type a name that is not listed. If the server lists no models, type the name.",
+        "description": "**Data that leaves your installation:** with every request, AI Drafts sends your request text together with the names, IDs and states of the entities, devices and areas it considers relevant, and the existing automations, to the server at the address below. If that server is on your own network, the data stays there. If it is a cloud service, the data is sent over the internet to that provider.\n\nModels reported by the server: {count}. If there are any, pick one from the list. If there are none, type the name of the model instead.",
         "data": {
           "model": "Model"
         },

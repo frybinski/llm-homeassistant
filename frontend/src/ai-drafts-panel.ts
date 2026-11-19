@@ -1,5 +1,5 @@
 import { LitElement, css, html } from "lit";
-import { type ApiError, createDraft, decide, listChangeSets, toApiError } from "./api";
+import { type ApiError, createDraft, decide, listChangeSets, listModels, toApiError } from "./api";
 import { AUTOMATIONS, HOUSE, NET_EXISTING, NET_PROPOSAL, PROPOSAL } from "./demo";
 import { type Strings, getStrings } from "./localize";
 import type { Decision } from "./logic/changeset-actions";
@@ -17,7 +17,7 @@ import type { HomeAssistant, PanelInfo, Route } from "./types";
 import { type DomainAutomation, type DomainMode } from "./views/domain-view";
 import { type InventoryItem } from "./views/inventory";
 import { type ProposalPart } from "./views/proposal";
-import { type HistoryState, type InfoState } from "./views/request";
+import { type HistoryState, type InfoState, type ModelsState } from "./views/request";
 import "./views/domain-view";
 import "./views/inventory";
 import "./views/proposal";
@@ -59,6 +59,7 @@ class AIDraftsPanel extends LitElement {
     _info: { state: true },
     _tab: { state: true },
     _history: { state: true },
+    _models: { state: true },
     _current: { state: true },
     _part: { state: true },
     _drafting: { state: true },
@@ -77,6 +78,7 @@ class AIDraftsPanel extends LitElement {
   declare _info: InfoState;
   declare _tab: Tab;
   declare _history: HistoryState;
+  declare _models: ModelsState;
   /** The change set open in the proposal view, as the backend last returned it. */
   declare _current: ChangeSet | null;
   declare _part: ProposalPart;
@@ -91,6 +93,7 @@ class AIDraftsPanel extends LitElement {
 
   private _requested = false;
   private _historySeq = 0;
+  private _modelsSeq = 0;
   /** Views and parts visited while the current change set is open. */
   private _viewsOpened: string[] = [];
 
@@ -99,6 +102,7 @@ class AIDraftsPanel extends LitElement {
     this._info = { status: "loading" };
     this._tab = "request";
     this._history = { status: "loading" };
+    this._models = { status: "loading" };
     this._current = null;
     this._part = "description";
     this._drafting = false;
@@ -116,6 +120,7 @@ class AIDraftsPanel extends LitElement {
       this._requested = true;
       void this._loadInfo();
       void this._loadHistory();
+      void this._loadModels();
     }
   }
 
@@ -128,6 +133,19 @@ class AIDraftsPanel extends LitElement {
       this._info = { status: "ready", info };
     } catch (err) {
       this._info = { status: "error", message: toApiError(err).message };
+    }
+  }
+
+  /** Reload the model list. A late answer of an older call is dropped. */
+  private async _loadModels(): Promise<void> {
+    const seq = ++this._modelsSeq;
+    try {
+      const models = await listModels(this.hass);
+      if (seq !== this._modelsSeq) return;
+      this._models = { status: "ready", models };
+    } catch (err) {
+      if (seq !== this._modelsSeq) return;
+      this._models = { status: "error", message: toApiError(err).message };
     }
   }
 
@@ -160,12 +178,14 @@ class AIDraftsPanel extends LitElement {
     this._go("proposal");
   }
 
-  private _onCreateDraft = async (e: CustomEvent<{ request: string }>): Promise<void> => {
+  private _onCreateDraft = async (
+    e: CustomEvent<{ request: string; model?: string | null }>,
+  ): Promise<void> => {
     if (this._drafting) return;
     this._drafting = true;
     this._draftError = null;
     try {
-      const changeSet = await createDraft(this.hass, e.detail.request);
+      const changeSet = await createDraft(this.hass, e.detail.request, e.detail.model);
       this._open(changeSet);
     } catch (err) {
       this._draftError = toApiError(err);
@@ -201,7 +221,10 @@ class AIDraftsPanel extends LitElement {
   private _go(tab: Tab): void {
     this._tab = tab;
     this._visit();
-    if (tab === "request") void this._loadHistory();
+    if (tab === "request") {
+      void this._loadHistory();
+      void this._loadModels();
+    }
   }
 
   private _setPart(part: ProposalPart): void {
@@ -280,6 +303,7 @@ class AIDraftsPanel extends LitElement {
           .t=${t}
           .language=${language}
           .info=${this._info}
+          .models=${this._models}
           .history=${this._history}
           .currentId=${this._current?.id ?? null}
           .drafting=${this._drafting}

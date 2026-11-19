@@ -127,7 +127,7 @@ def test_record_of_an_automation() -> None:
     }
 
 
-def test_wait_template_has_no_read_arcs_but_a_template_trigger_has() -> None:
+def test_wait_template_and_template_trigger_both_read() -> None:
     config = {
         "triggers": [
             {"trigger": "template", "value_template": "{{ is_state('light.a','on') }}"}
@@ -138,7 +138,7 @@ def test_wait_template_has_no_read_arcs_but_a_template_trigger_has() -> None:
         config, automation_id="x", source="ui", resolver=StaticResolver()
     )
     reads = sorted(a.source for a in net.arcs if a.kind.value == "read")
-    assert reads == ["p:light.a:*"]
+    assert reads == ["p:light.a:*", "p:light.b:*"]
 
 
 def test_translation_is_independent_of_python_dict_subclasses() -> None:

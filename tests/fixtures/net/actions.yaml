@@ -166,7 +166,7 @@ cases:
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: wait-template
-    rule: "wait_template: a wait transition, annotation template, opaque"
+    rule: "wait_template: a wait transition, annotation template, read arcs (role trigger) from the * places of the entities it refers to, opaque"
     resolver: {}
     config:
       triggers: *time_trigger
@@ -174,7 +174,7 @@ cases:
         - wait_template: "{{ is_state('light.a', 'on') }}"
           timeout: 30
     expect:
-      places: ["p:x:triggered", "p:x:done"]
+      places: ["p:x:triggered", "p:x:done", "p:light.a:*"]
       transitions:
         <<: *time_t
         "t:x:actions[0]":
@@ -183,8 +183,57 @@ cases:
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
         - "consume p:x:triggered -> t:x:actions[0]"
+        - "read p:light.a:* -> t:x:actions[0] [trigger]"
         - "produce t:x:actions[0] -> p:x:done"
       opaque: ["actions[0]"]
+
+  - id: wait-template-undeterminable
+    rule: "wait_template whose entities cannot be determined: no read arcs, still opaque"
+    resolver: {}
+    config:
+      triggers: *time_trigger
+      actions:
+        - wait_template: "{{ states.light | list | count == 0 }}"
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: wait
+          annotations: [{template: "{{ states.light | list | count == 0 }}"}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["actions[0]"]
+
+  - id: wait-for-trigger-several-triggers
+    rule: "Alternatives: wait_for_trigger with several triggers is one wait transition per trigger and per combination within it; the timeout is on each"
+    config:
+      triggers: *time_trigger
+      actions:
+        - wait_for_trigger:
+            - {trigger: state, entity_id: binary_sensor.d, to: "on"}
+            - {trigger: state, entity_id: [binary_sensor.e, binary_sensor.f], to: "off"}
+          timeout: "00:01:00"
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:binary_sensor.d:on", "p:binary_sensor.e:off", "p:binary_sensor.f:off"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]#0": {kind: wait, annotations: [{timeout: "00:01:00"}]}
+        "t:x:actions[0]#1": {kind: wait, annotations: [{timeout: "00:01:00"}]}
+        "t:x:actions[0]#2": {kind: wait, annotations: [{timeout: "00:01:00"}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]#0"
+        - "consume p:x:triggered -> t:x:actions[0]#1"
+        - "consume p:x:triggered -> t:x:actions[0]#2"
+        - "read p:binary_sensor.d:on -> t:x:actions[0]#0 [trigger]"
+        - "read p:binary_sensor.e:off -> t:x:actions[0]#1 [trigger]"
+        - "read p:binary_sensor.f:off -> t:x:actions[0]#2 [trigger]"
+        - "produce t:x:actions[0]#0 -> p:x:done"
+        - "produce t:x:actions[0]#1 -> p:x:done"
+        - "produce t:x:actions[0]#2 -> p:x:done"
 
   # --- choose, if -----------------------------------------------------------
   - id: choose
@@ -423,7 +472,7 @@ cases:
         - "produce t:x:actions[0]:join -> p:x:done"
 
   - id: repeat-count
-    rule: "repeat: the body, then `loop` back to its first place and `exit` to the place after the step; the count is an annotation on both"
+    rule: "Loops: with a count the check comes first; loop takes the token from the head into the body, the body returns it, exit leaves from the head (zero runs possible); the count is an annotation on loop, exit says otherwise"
     config:
       triggers: *time_trigger
       actions:
@@ -432,24 +481,24 @@ cases:
             sequence:
               - {action: light.toggle, target: {entity_id: light.a}}
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]:end", "p:light.a:*"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0].repeat.sequence[0]", "p:light.a:*"]
       transitions:
         <<: *time_t
         "t:x:actions[0].repeat.sequence[0]": {kind: action, annotations: [{action: light.toggle}]}
         "t:x:actions[0]:loop": {kind: loop, annotations: [{repeat: {count: 3}}]}
-        "t:x:actions[0]:exit": {kind: exit, annotations: [{repeat: {count: 3}}]}
+        "t:x:actions[0]:exit": {kind: exit, annotations: [{otherwise: true}]}
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0].repeat.sequence[0]"
-        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:@actions[0]:end"
+        - "consume p:x:triggered -> t:x:actions[0]:loop"
+        - "produce t:x:actions[0]:loop -> p:x:@actions[0].repeat.sequence[0]"
+        - "consume p:x:@actions[0].repeat.sequence[0] -> t:x:actions[0].repeat.sequence[0]"
+        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:triggered"
         - "write t:x:actions[0].repeat.sequence[0] -> p:light.a:*"
-        - "consume p:x:@actions[0]:end -> t:x:actions[0]:loop"
-        - "produce t:x:actions[0]:loop -> p:x:triggered"
-        - "consume p:x:@actions[0]:end -> t:x:actions[0]:exit"
+        - "consume p:x:triggered -> t:x:actions[0]:exit"
         - "produce t:x:actions[0]:exit -> p:x:done"
 
   - id: repeat-while
-    rule: "repeat: the while conditions are guards on the transition that goes round again"
+    rule: "Loops: while checks first; its conditions sit on loop, exit says otherwise"
     config:
       triggers: *time_trigger
       actions:
@@ -459,24 +508,24 @@ cases:
             sequence:
               - delay: "00:00:10"
     expect:
-      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]:end", "p:light.a:on"]
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0].repeat.sequence[0]", "p:light.a:on"]
       transitions:
         <<: *time_t
         "t:x:actions[0].repeat.sequence[0]": {kind: wait, annotations: [{delay: "00:00:10"}]}
         "t:x:actions[0]:loop": {kind: loop}
-        "t:x:actions[0]:exit": {kind: exit}
+        "t:x:actions[0]:exit": {kind: exit, annotations: [{otherwise: true}]}
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
-        - "consume p:x:triggered -> t:x:actions[0].repeat.sequence[0]"
-        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:@actions[0]:end"
-        - "consume p:x:@actions[0]:end -> t:x:actions[0]:loop"
+        - "consume p:x:triggered -> t:x:actions[0]:loop"
         - "read p:light.a:on -> t:x:actions[0]:loop [condition]"
-        - "produce t:x:actions[0]:loop -> p:x:triggered"
-        - "consume p:x:@actions[0]:end -> t:x:actions[0]:exit"
+        - "produce t:x:actions[0]:loop -> p:x:@actions[0].repeat.sequence[0]"
+        - "consume p:x:@actions[0].repeat.sequence[0] -> t:x:actions[0].repeat.sequence[0]"
+        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]:exit"
         - "produce t:x:actions[0]:exit -> p:x:done"
 
   - id: repeat-until
-    rule: "repeat: the until conditions are guards on the transition that leaves"
+    rule: "Loops: until checks last; the body starts at the head and ends in :end; its conditions sit on exit, loop says otherwise"
     config:
       triggers: *time_trigger
       actions:
@@ -490,7 +539,7 @@ cases:
       transitions:
         <<: *time_t
         "t:x:actions[0].repeat.sequence[0]": {kind: wait, annotations: [{delay: "00:00:10"}]}
-        "t:x:actions[0]:loop": {kind: loop}
+        "t:x:actions[0]:loop": {kind: loop, annotations: [{otherwise: true}]}
         "t:x:actions[0]:exit":
           kind: exit
           annotations: [{guard: {condition: numeric_state, above: 20}}]

@@ -53,6 +53,55 @@ cases:
         - "consume p:x:triggered -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 
+  - id: state-several-states
+    rule: "state with several states: read arcs from p:<entity>:*, annotation guard, opaque (an or)"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: state, entity_id: light.a, state: ["on", "unavailable"]}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: state, state: ["on", "unavailable"]}}
+      arcs:
+        - "read p:light.a:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["conditions[0]"]
+
+  - id: state-match-any
+    rule: "state with match: any: read arcs from p:<entity>:*, annotation guard, opaque"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: state, entity_id: [light.a, light.b], state: "on", match: any}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:*", "p:light.b:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: state, state: "on", match: any}}
+      arcs:
+        - "read p:light.a:* -> t:x:triggers[0] [condition]"
+        - "read p:light.b:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["conditions[0]"]
+
   - id: numeric-state
     rule: "numeric_state: read arc from p:<entity>:*, annotation guard"
     config:

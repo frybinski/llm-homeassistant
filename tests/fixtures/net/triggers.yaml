@@ -40,7 +40,7 @@ cases:
         - "produce t:x:actions[0] -> p:x:done"
 
   - id: state-with-to-several-entities
-    rule: "state with `to`: a read arc from each p:<entity>:<to>"
+    rule: "Alternatives: a trigger naming several entities is one transition per entity, ids #0, #1"
     config:
       triggers:
         - {trigger: state, entity_id: [light.a, light.b], to: "on"}
@@ -49,11 +49,85 @@ cases:
       places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.b:on"]
       transitions:
         <<: *tail_transition
-        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:triggers[0]#0": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:triggers[0]#1": {kind: trigger, annotations: [{mode: single}]}
       arcs:
-        - "read p:light.a:on -> t:x:triggers[0] [trigger]"
-        - "read p:light.b:on -> t:x:triggers[0] [trigger]"
-        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "read p:light.a:on -> t:x:triggers[0]#0 [trigger]"
+        - "read p:light.b:on -> t:x:triggers[0]#1 [trigger]"
+        - "produce t:x:triggers[0]#0 -> p:x:triggered"
+        - "produce t:x:triggers[0]#1 -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: state-with-several-entities-and-states
+    rule: "Alternatives: several entities and several target states: one transition per combination, each with one read arc"
+    config:
+      triggers:
+        - {trigger: state, entity_id: [light.a, light.b], to: ["on", "unavailable"], for: "00:00:05"}
+      actions: *tail_actions
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:done"
+        - "p:light.a:on"
+        - "p:light.a:unavailable"
+        - "p:light.b:on"
+        - "p:light.b:unavailable"
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]#0": {kind: trigger, annotations: [{mode: single}, {for: "00:00:05"}]}
+        "t:x:triggers[0]#1": {kind: trigger, annotations: [{mode: single}, {for: "00:00:05"}]}
+        "t:x:triggers[0]#2": {kind: trigger, annotations: [{mode: single}, {for: "00:00:05"}]}
+        "t:x:triggers[0]#3": {kind: trigger, annotations: [{mode: single}, {for: "00:00:05"}]}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0]#0 [trigger]"
+        - "read p:light.a:unavailable -> t:x:triggers[0]#1 [trigger]"
+        - "read p:light.b:on -> t:x:triggers[0]#2 [trigger]"
+        - "read p:light.b:unavailable -> t:x:triggers[0]#3 [trigger]"
+        - "produce t:x:triggers[0]#0 -> p:x:triggered"
+        - "produce t:x:triggers[0]#1 -> p:x:triggered"
+        - "produce t:x:triggers[0]#2 -> p:x:triggered"
+        - "produce t:x:triggers[0]#3 -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: state-without-to-several-entities
+    rule: "Alternatives: without `to`, one transition per entity, each reading its * place"
+    config:
+      triggers:
+        - {trigger: state, entity_id: [light.a, light.b]}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:*", "p:light.b:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]#0": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:triggers[0]#1": {kind: trigger, annotations: [{mode: single}]}
+      arcs:
+        - "read p:light.a:* -> t:x:triggers[0]#0 [trigger]"
+        - "read p:light.b:* -> t:x:triggers[0]#1 [trigger]"
+        - "produce t:x:triggers[0]#0 -> p:x:triggered"
+        - "produce t:x:triggers[0]#1 -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: numeric-state-several-entities
+    rule: "Alternatives: numeric_state on several entities is one transition per entity, each with the guard"
+    config:
+      triggers:
+        - {trigger: numeric_state, entity_id: [sensor.t, sensor.u], below: 5}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:sensor.t:*", "p:sensor.u:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]#0": {kind: trigger, annotations: [{mode: single}, {guard: {below: 5}}]}
+        "t:x:triggers[0]#1": {kind: trigger, annotations: [{mode: single}, {guard: {below: 5}}]}
+      arcs:
+        - "read p:sensor.t:* -> t:x:triggers[0]#0 [trigger]"
+        - "read p:sensor.u:* -> t:x:triggers[0]#1 [trigger]"
+        - "produce t:x:triggers[0]#0 -> p:x:triggered"
+        - "produce t:x:triggers[0]#1 -> p:x:triggered"
         - "consume p:x:triggered -> t:x:actions[0]"
         - "produce t:x:actions[0] -> p:x:done"
 

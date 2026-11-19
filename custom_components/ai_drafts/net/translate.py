@@ -193,6 +193,11 @@ class _Guard:
         self.annotations.extend(other.annotations)
 
 
+def _alternative_id(suffix: str, index: int, count: int) -> str:
+    """Return the id suffix of one of several alternatives (``#0``, ``#1``, ...)."""
+    return suffix if count == 1 else f"{suffix}#{index}"
+
+
 # ----------------------------------------------------------------------------
 # The builder of one automation's net
 
@@ -361,9 +366,11 @@ class _Builder:
             entities = self.entity_refs(cond.get("entity_id"), path)
             states = [_state_text(s) for s in _as_list(cond.get("state"))]
             plain_states = [s for s in states if not is_template(s)]
+            either = len(states) > 1 or cond.get("match") == "any"
             if (
                 cond.get("attribute") is not None
                 or not states
+                or either
                 or len(states) != len(plain_states)
             ):
                 for entity_id in entities:
@@ -371,6 +378,8 @@ class _Builder:
                 annotate()
                 if len(states) != len(plain_states):
                     self.opaque(path, "state is a template")
+                if either:
+                    self.opaque(path, "state: any of several, the net cannot say which")
             else:
                 for entity_id in entities:
                     for state in states:
@@ -431,16 +440,22 @@ class _Builder:
 
     # -- triggers ---------------------------------------------------------
 
-    def trigger(self, raw: Any, path: str) -> _Guard:
-        """Return the read arcs (to be used with role trigger) and annotations."""
+    def trigger(self, raw: Any, path: str) -> list[_Guard]:
+        """Return the alternatives of a trigger: read arcs (role trigger) and notes.
+
+        Several entities, several target states or both are alternatives, so
+        each combination is its own guard and later its own transition.
+        """
         guard = _Guard()
+        # Set for triggers that stand for any of several (entity, state) reads.
+        alternatives: list[tuple[str, str | None]] | None = None
         if not isinstance(raw, Mapping):
             self.opaque(path, "trigger is not a mapping")
-            return guard
+            return [guard]
         platform = raw.get("trigger", raw.get("platform"))
         if not isinstance(platform, str):
             self.opaque(path, "trigger without a platform")
-            return guard
+            return [guard]
         event = {"platform": platform}
 
         if platform == "state":
@@ -452,20 +467,20 @@ class _Builder:
                 if to is None or attribute is not None
                 else [_state_text(s) for s in _as_list(to)]
             )
-            for entity_id in entities:
-                if states:
-                    for state in states:
-                        guard.read(entity_id, state)
-                else:
-                    guard.read(entity_id, None)
+            alternatives = [
+                (entity_id, state)
+                for entity_id in entities
+                for state in (states or [None])
+            ]
             for key in ("from", "not_from", "not_to", "attribute", "for"):
                 if raw.get(key) is not None:
                     guard.annotations.append(Annotation(key, _plain(raw[key])))
             if attribute is not None and to is not None:
                 guard.annotations.append(Annotation("to", _plain(to)))
         elif platform == "numeric_state":
-            for entity_id in self.entity_refs(raw.get("entity_id"), path):
-                guard.read(entity_id, None)
+            alternatives = [
+                (e, None) for e in self.entity_refs(raw.get("entity_id"), path)
+            ]
             bounds = {
                 key: _plain(raw[key])
                 for key in ("above", "below", "attribute", "value_template")
@@ -482,8 +497,9 @@ class _Builder:
                 Annotation("event", {**event, **_settings(raw, _TRIGGER_META)})
             )
         elif platform == "zone":
-            for entity_id in self.entity_refs(raw.get("entity_id"), path):
-                guard.read(entity_id, None)
+            alternatives = [
+                (e, None) for e in self.entity_refs(raw.get("entity_id"), path)
+            ]
             settings = _settings(raw, _TRIGGER_META | {"entity_id"})
             guard.annotations.append(Annotation("event", {**event, **settings}))
         elif platform == "template":
@@ -498,7 +514,9 @@ class _Builder:
             )
             if platform == "device":
                 self.opaque(path, "device trigger")
-        return guard
+        if not alternatives:
+            return [guard]
+        return [_Guard([read], list(guard.annotations)) for read in alternatives]
 
     # -- targets ----------------------------------------------------------
 
@@ -700,30 +718,11 @@ class _Builder:
     def _wait_template(
         self, raw: Mapping[str, Any], path: str, place_in: str, place_out: str
     ) -> bool:
-        # The specification gives this step no read arcs, unlike template
-        # triggers and conditions.
+        guard = _Guard()
         annotations = [Annotation("template", _plain(raw["wait_template"]))]
         if "timeout" in raw:
             annotations.append(Annotation("timeout", _plain(raw["timeout"])))
-        self.opaque(path, "template: the net does not evaluate it")
-        self.emit(
-            path,
-            TransitionKind.WAIT,
-            path,
-            consume=[place_in],
-            produce=[place_out],
-            annotations=annotations,
-        )
-        return True
-
-    def _wait_for_trigger(
-        self, raw: Mapping[str, Any], path: str, place_in: str, place_out: str
-    ) -> bool:
-        guard = _Guard()
-        for index, trigger in enumerate(_as_list(raw["wait_for_trigger"])):
-            guard.extend(self.trigger(trigger, f"{path}.wait_for_trigger[{index}]"))
-        if "timeout" in raw:
-            guard.annotations.append(Annotation("timeout", _plain(raw["timeout"])))
+        self.template_guard(raw["wait_template"], path, guard)
         self.emit(
             path,
             TransitionKind.WAIT,
@@ -731,8 +730,33 @@ class _Builder:
             consume=[place_in],
             produce=[place_out],
             reads=[(e, s, ArcRole.TRIGGER) for e, s in guard.reads],
-            annotations=guard.annotations,
+            annotations=annotations,
         )
+        return True
+
+    def _wait_for_trigger(
+        self, raw: Mapping[str, Any], path: str, place_in: str, place_out: str
+    ) -> bool:
+        alternatives: list[_Guard] = []
+        for index, trigger in enumerate(_as_list(raw["wait_for_trigger"])):
+            alternatives.extend(
+                self.trigger(trigger, f"{path}.wait_for_trigger[{index}]")
+            )
+        if not alternatives:
+            alternatives = [_Guard()]
+        extra = (
+            [Annotation("timeout", _plain(raw["timeout"]))] if "timeout" in raw else []
+        )
+        for index, guard in enumerate(alternatives):
+            self.emit(
+                _alternative_id(path, index, len(alternatives)),
+                TransitionKind.WAIT,
+                path,
+                consume=[place_in],
+                produce=[place_out],
+                reads=[(e, s, ArcRole.TRIGGER) for e, s in guard.reads],
+                annotations=[*guard.annotations, *extra],
+            )
         return True
 
     def _action(
@@ -894,30 +918,55 @@ class _Builder:
             self._skip(path, place_in, place_out)
             return True
         body = _as_list(config.get("sequence"))
-        body_end = place_in
-        if body:
-            body_end = self.end_of(path)
-            if not self.sequence(body, f"{path}.repeat.sequence", place_in, body_end):
-                return False
-        annotations = [
+        body_path = f"{path}.repeat.sequence"
+        looping = self.conditions(config.get("while"), f"{path}.repeat.while")
+        leaving = self.conditions(config.get("until"), f"{path}.repeat.until")
+        counted = [
             Annotation("repeat", {key: _plain(config[key])})
             for key in ("count", "for_each")
             if key in config
         ]
-        looping = self.conditions(config.get("while"), f"{path}.repeat.while")
-        leaving = self.conditions(config.get("until"), f"{path}.repeat.until")
-        for suffix, kind, target, guard in (
-            ("loop", TransitionKind.LOOP, place_in, looping),
-            ("exit", TransitionKind.EXIT, place_out, leaving),
-        ):
+        otherwise = [Annotation("otherwise", True)]
+        if "until" in config:
+            # The check comes last: the body starts at the head and ends in
+            # `:end`, from where `loop` returns to the head and `exit` leaves.
+            body_end = place_in
+            if body:
+                body_end = self.end_of(path)
+                if not self.sequence(body, body_path, place_in, body_end):
+                    return False
+            pairs = (
+                ("loop", TransitionKind.LOOP, body_end, place_in, otherwise),
+                ("exit", TransitionKind.EXIT, body_end, place_out, []),
+            )
+        else:
+            # The check comes first: `loop` takes the token from the head into
+            # the body, the body returns it to the head, `exit` leaves from it.
+            if body:
+                first = self.before(f"{body_path}[0]")
+                self.sequence(body, body_path, first, place_in)
+            else:
+                first = place_in
+            pairs = (
+                ("loop", TransitionKind.LOOP, place_in, first, counted),
+                ("exit", TransitionKind.EXIT, place_in, place_out, otherwise),
+            )
+        for suffix, kind, source, target, notes in pairs:
+            guard = (
+                looping
+                if suffix == "loop" and "until" not in config
+                else leaving
+                if suffix == "exit" and "until" in config
+                else _Guard()
+            )
             self.emit(
                 f"{path}:{suffix}",
                 kind,
                 path,
-                consume=[body_end],
+                consume=[source],
                 produce=[target],
                 reads=[(e, s, ArcRole.CONDITION) for e, s in guard.reads],
-                annotations=[*annotations, *guard.annotations],
+                annotations=[*notes, *guard.annotations],
             )
         return True
 
@@ -1010,22 +1059,23 @@ def translate_automation(
         path = f"triggers[{index}]"
         if isinstance(raw, Mapping) and raw.get("enabled") is False:
             continue
-        trigger = builder.trigger(raw, path)
-        builder.emit(
-            path,
-            TransitionKind.TRIGGER,
-            path,
-            produce=[triggered],
-            reads=[
-                *((e, s, ArcRole.TRIGGER) for e, s in trigger.reads),
-                *((e, s, ArcRole.CONDITION) for e, s in guard.reads),
-            ],
-            annotations=[
-                Annotation("mode", mode),
-                *trigger.annotations,
-                *guard.annotations,
-            ],
-        )
+        alternatives = builder.trigger(raw, path)
+        for number, trigger in enumerate(alternatives):
+            builder.emit(
+                _alternative_id(path, number, len(alternatives)),
+                TransitionKind.TRIGGER,
+                path,
+                produce=[triggered],
+                reads=[
+                    *((e, s, ArcRole.TRIGGER) for e, s in trigger.reads),
+                    *((e, s, ArcRole.CONDITION) for e, s in guard.reads),
+                ],
+                annotations=[
+                    Annotation("mode", mode),
+                    *trigger.annotations,
+                    *guard.annotations,
+                ],
+            )
     builder.sequence(actions, "actions", triggered, done)
 
     record = AutomationRecord(

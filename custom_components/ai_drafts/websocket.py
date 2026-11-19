@@ -34,6 +34,8 @@ from .const import (
     WS_TYPE_INFO,
     WS_TYPE_JOURNAL_LIST,
     WS_TYPE_MODELS,
+    WS_TYPE_NET_EXPORT,
+    WS_TYPE_NET_GET,
 )
 from .data import AIDraftsData
 from .drafting import (
@@ -45,6 +47,7 @@ from .drafting import (
     async_list_models,
 )
 from .journal import EVENT_DISCARDED
+from .net import Net, NetError, async_build_net, export_json, export_pnml
 from .pipeline import DraftBusyError, async_create_draft
 
 ERR_NOT_LOADED = "not_loaded"
@@ -56,6 +59,7 @@ ERR_REVERT_REFUSED = "revert_refused"
 ERR_BUSY = "busy"
 ERR_MODEL = "model_error"
 ERR_INVALID_MODEL = "invalid_model"
+ERR_NET = "net_error"
 
 # Sent by the panel with a decision: which view was active, which were opened.
 DECISION_FIELDS = {
@@ -76,6 +80,8 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_changesets_discard)
     websocket_api.async_register_command(hass, ws_changesets_revert)
     websocket_api.async_register_command(hass, ws_journal_list)
+    websocket_api.async_register_command(hass, ws_net_get)
+    websocket_api.async_register_command(hass, ws_net_export)
 
 
 @callback
@@ -391,3 +397,78 @@ def ws_journal_list(
     connection.send_result(
         msg["id"], entry.runtime_data.journal.list(msg.get("change_set_id"))
     )
+
+
+# Options of the net commands. The change set, when given, adds its automation
+# operations as proposals; `environment` adds the transitions for changes from
+# outside.
+NET_OPTIONS = {
+    vol.Optional("change_set_id"): str,
+    vol.Optional("environment", default=False): bool,
+}
+
+
+async def _build_net(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> Net | None:
+    """Build the net for a net command, or answer with an error and return None."""
+    if (entry := _get_loaded_entry(hass, connection, msg["id"])) is None:
+        return None
+    change_set = None
+    if (change_set_id := msg.get("change_set_id")) is not None:
+        change_set = entry.runtime_data.changesets.get(change_set_id)
+        if change_set is None:
+            connection.send_error(
+                msg["id"], ERR_NOT_FOUND, f"Unknown change set {change_set_id}"
+            )
+            return None
+    try:
+        return await async_build_net(
+            hass, change_set=change_set, environment=msg["environment"]
+        )
+    except NetError as err:
+        connection.send_error(msg["id"], ERR_NET, str(err))
+        return None
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_TYPE_NET_GET, **NET_OPTIONS})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_net_get(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return the net of all automations, optionally with a change set merged in."""
+    if (net := await _build_net(hass, connection, msg)) is not None:
+        connection.send_result(msg["id"], net.to_dict())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_TYPE_NET_EXPORT,
+        vol.Required("format"): vol.In(["json", "pnml"]),
+        **NET_OPTIONS,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_net_export(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return the net as a file: JSON, or PNML for external tools."""
+    if (net := await _build_net(hass, connection, msg)) is None:
+        return
+    try:
+        if msg["format"] == "json":
+            content, filename = export_json(net), "ai_drafts_net.json"
+        else:
+            content, filename = export_pnml(net), "ai_drafts_net.pnml"
+    except NetError as err:
+        connection.send_error(msg["id"], ERR_NET, str(err))
+        return
+    connection.send_result(msg["id"], {"filename": filename, "content": content})

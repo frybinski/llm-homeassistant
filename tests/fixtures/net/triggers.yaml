@@ -1,0 +1,319 @@
+# One case per row of the specification's trigger table (docs/net-mapping.md,
+# "Mapping rules / Triggers"). Written by hand from the document, not from the
+# output of the translator.
+#
+# Reading a case:
+#   config      the automation, in Home Assistant's own format
+#   resolver    optional; a StaticResolver (targets "kind:id" -> entities,
+#               areas entity -> area). Absent: no resolver at all.
+#   expect      the whole net: places (ids), transitions (id -> kind and
+#               annotations, each annotation as {name: value}), arcs
+#               ("kind source -> target [role]") and the paths in `opaque`.
+#
+# Every case ends in the same single step, `delay`, so the control place chain
+# is always triggered -> t:x:actions[0] -> done.
+
+defs:
+  tail_actions: &tail_actions
+    - delay: "00:00:01"
+  tail_transition: &tail_transition
+    "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+
+cases:
+  - id: state-with-to
+    rule: "state with `to`: read arc from p:<entity>:<to>; `from` and `for` become annotations"
+    config:
+      triggers:
+        - {trigger: state, entity_id: light.a, from: "off", to: "on", for: "00:00:05"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations: [{mode: single}, {from: "off"}, {for: "00:00:05"}]
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: state-with-to-several-entities
+    rule: "state with `to`: a read arc from each p:<entity>:<to>"
+    config:
+      triggers:
+        - {trigger: state, entity_id: [light.a, light.b], to: "on"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.b:on"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [trigger]"
+        - "read p:light.b:on -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: state-without-to
+    rule: "state without `to`: read arc from p:<entity>:*"
+    config:
+      triggers:
+        - {trigger: state, entity_id: light.a, from: "off"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}, {from: "off"}]}
+      arcs:
+        - "read p:light.a:* -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: numeric-state
+    rule: "numeric_state: read arc from p:<entity>:*, annotation guard with the bounds"
+    config:
+      triggers:
+        - {trigger: numeric_state, entity_id: sensor.t, above: 20, below: 30}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:sensor.t:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations: [{mode: single}, {guard: {above: 20, below: 30}}]
+      arcs:
+        - "read p:sensor.t:* -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: sun
+    rule: "sun: read arc from p:sun.sun:*, annotation event (sunset, offset)"
+    config:
+      triggers:
+        - {trigger: sun, event: sunset, offset: "-00:30:00"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:sun.sun:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - {event: {platform: sun, event: sunset, offset: "-00:30:00"}}
+      arcs:
+        - "read p:sun.sun:* -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: zone
+    rule: "zone: read arc from p:<entity>:*, annotation event"
+    config:
+      triggers:
+        - {trigger: zone, entity_id: person.anna, zone: zone.home, event: enter}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:person.anna:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - {event: {platform: zone, zone: zone.home, event: enter}}
+      arcs:
+        - "read p:person.anna:* -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: template-entities-determined
+    rule: "template: annotation template, read arcs for the entities it refers to, opaque"
+    resolver: {}
+    config:
+      triggers:
+        - trigger: template
+          value_template: "{{ is_state('light.a', 'on') and states('sensor.t') | float > 3 }}"
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:*", "p:sensor.t:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - {template: "{{ is_state('light.a', 'on') and states('sensor.t') | float > 3 }}"}
+      arcs:
+        - "read p:light.a:* -> t:x:triggers[0] [trigger]"
+        - "read p:sensor.t:* -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["triggers[0]"]
+
+  - id: template-entities-not-determinable
+    rule: "template: when the entities cannot be determined there are no read arcs; still opaque"
+    resolver: {}
+    config:
+      triggers:
+        - {trigger: template, value_template: "{{ states.light | selectattr('state', 'eq', 'on') | list | count > 2 }}"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - {template: "{{ states.light | selectattr('state', 'eq', 'on') | list | count > 2 }}"}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["triggers[0]"]
+
+  - id: template-without-resolver
+    rule: "without a resolver a template is recorded as opaque and nothing is linked"
+    config:
+      triggers:
+        - {trigger: template, value_template: "{{ is_state('light.a', 'on') }}"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations: [{mode: single}, {template: "{{ is_state('light.a', 'on') }}"}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["triggers[0]"]
+
+  - id: platforms-without-input-place
+    rule: "time, time_pattern, event, homeassistant, webhook, mqtt, calendar, tag, conversation: no input place, annotation event with platform and settings"
+    config:
+      triggers:
+        - {trigger: time, at: "07:00:00"}
+        - {trigger: time_pattern, minutes: "/5"}
+        - {trigger: event, event_type: my_event}
+        - {trigger: homeassistant, event: start}
+        - {trigger: webhook, webhook_id: hook1}
+        - {trigger: mqtt, topic: home/door}
+        - {trigger: calendar, event: start, entity_id: calendar.work, offset: "0:0:0"}
+        - {trigger: tag, tag_id: abc}
+        - {trigger: conversation, command: "turn on the light"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          {kind: trigger, annotations: [{mode: single}, {event: {platform: time, at: "07:00:00"}}]}
+        "t:x:triggers[1]":
+          {kind: trigger, annotations: [{mode: single}, {event: {platform: time_pattern, minutes: "/5"}}]}
+        "t:x:triggers[2]":
+          {kind: trigger, annotations: [{mode: single}, {event: {platform: event, event_type: my_event}}]}
+        "t:x:triggers[3]":
+          {kind: trigger, annotations: [{mode: single}, {event: {platform: homeassistant, event: start}}]}
+        "t:x:triggers[4]":
+          {kind: trigger, annotations: [{mode: single}, {event: {platform: webhook, webhook_id: hook1}}]}
+        "t:x:triggers[5]":
+          {kind: trigger, annotations: [{mode: single}, {event: {platform: mqtt, topic: home/door}}]}
+        "t:x:triggers[6]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - {event: {platform: calendar, event: start, entity_id: calendar.work, offset: "0:0:0"}}
+        "t:x:triggers[7]":
+          {kind: trigger, annotations: [{mode: single}, {event: {platform: tag, tag_id: abc}}]}
+        "t:x:triggers[8]":
+          kind: trigger
+          annotations: [{mode: single}, {event: {platform: conversation, command: "turn on the light"}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "produce t:x:triggers[1] -> p:x:triggered"
+        - "produce t:x:triggers[2] -> p:x:triggered"
+        - "produce t:x:triggers[3] -> p:x:triggered"
+        - "produce t:x:triggers[4] -> p:x:triggered"
+        - "produce t:x:triggers[5] -> p:x:triggered"
+        - "produce t:x:triggers[6] -> p:x:triggered"
+        - "produce t:x:triggers[7] -> p:x:triggered"
+        - "produce t:x:triggers[8] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: any-other-platform
+    rule: "any other platform: no input place, annotation event with the platform and its settings"
+    config:
+      triggers:
+        - {trigger: persistent_notification, update_type: added}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - {event: {platform: persistent_notification, update_type: added}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: device-trigger-is-opaque
+    rule: "device triggers are opaque"
+    config:
+      triggers:
+        - {trigger: device, domain: light, type: turned_on, device_id: abc123, entity_id: 0b1c2d}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - {event: {platform: device, domain: light, type: turned_on, device_id: abc123, entity_id: 0b1c2d}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["triggers[0]"]
+
+  - id: every-trigger-produces-triggered-and-carries-the-mode
+    rule: "every trigger transition produces `triggered` and carries the automation's mode as annotation `mode`"
+    config:
+      mode: restart
+      triggers:
+        - {trigger: state, entity_id: light.a, to: "on"}
+        - {trigger: time, at: "07:00:00"}
+      actions: *tail_actions
+    expect:
+      record: {mode: restart, complete: true}
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: restart}]}
+        "t:x:triggers[1]":
+          {kind: trigger, annotations: [{mode: restart}, {event: {platform: time, at: "07:00:00"}}]}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "produce t:x:triggers[1] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"

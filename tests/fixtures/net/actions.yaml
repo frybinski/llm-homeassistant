@@ -1,0 +1,983 @@
+# One case per row of the specification's action table, plus the effect table,
+# targets and indirection (docs/net-mapping.md, "Mapping rules / Actions").
+# Written by hand from the document. See triggers.yaml for the format.
+#
+# Where the document does not name an id, the case spells out the convention
+# the implementation fixes (see the notes in docs/net-mapping.md's companion
+# list in the report): the place before the step at a path is
+# p:x:@<path>, branch and loop structures add `:end`, `:fork`, `:join`,
+# `:loop`, `:exit`, `:stop` to the path of the step.
+
+defs:
+  time_trigger: &time_trigger
+    - {trigger: time, at: "07:00:00"}
+  time_t: &time_t
+    "t:x:triggers[0]":
+      kind: trigger
+      annotations: [{mode: single}, {event: {platform: time, at: "07:00:00"}}]
+
+cases:
+  # --- effect table ---------------------------------------------------------
+  - id: effect-table
+    rule: "known effects: turn_on/turn_off for every domain, lock, unlock, open_cover, close_cover; a write arc to the effect's state place"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, target: {entity_id: light.a}}
+        - {action: switch.turn_off, target: {entity_id: switch.s}}
+        - {action: lock.lock, target: {entity_id: lock.l}}
+        - {action: lock.unlock, target: {entity_id: lock.l}}
+        - {action: cover.open_cover, target: {entity_id: cover.c}}
+        - {action: cover.close_cover, target: {entity_id: cover.c}}
+        - {action: homeassistant.turn_off, target: {entity_id: fan.f}}
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:@actions[1]"
+        - "p:x:@actions[2]"
+        - "p:x:@actions[3]"
+        - "p:x:@actions[4]"
+        - "p:x:@actions[5]"
+        - "p:x:@actions[6]"
+        - "p:x:done"
+        - "p:light.a:on"
+        - "p:switch.s:off"
+        - "p:lock.l:locked"
+        - "p:lock.l:unlocked"
+        - "p:cover.c:open"
+        - "p:cover.c:closed"
+        - "p:fan.f:off"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: action, annotations: [{action: light.turn_on}]}
+        "t:x:actions[1]": {kind: action, annotations: [{action: switch.turn_off}]}
+        "t:x:actions[2]": {kind: action, annotations: [{action: lock.lock}]}
+        "t:x:actions[3]": {kind: action, annotations: [{action: lock.unlock}]}
+        "t:x:actions[4]": {kind: action, annotations: [{action: cover.open_cover}]}
+        "t:x:actions[5]": {kind: action, annotations: [{action: cover.close_cover}]}
+        "t:x:actions[6]": {kind: action, annotations: [{action: homeassistant.turn_off}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "write t:x:actions[0] -> p:light.a:on"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:@actions[2]"
+        - "write t:x:actions[1] -> p:switch.s:off"
+        - "consume p:x:@actions[2] -> t:x:actions[2]"
+        - "produce t:x:actions[2] -> p:x:@actions[3]"
+        - "write t:x:actions[2] -> p:lock.l:locked"
+        - "consume p:x:@actions[3] -> t:x:actions[3]"
+        - "produce t:x:actions[3] -> p:x:@actions[4]"
+        - "write t:x:actions[3] -> p:lock.l:unlocked"
+        - "consume p:x:@actions[4] -> t:x:actions[4]"
+        - "produce t:x:actions[4] -> p:x:@actions[5]"
+        - "write t:x:actions[4] -> p:cover.c:open"
+        - "consume p:x:@actions[5] -> t:x:actions[5]"
+        - "produce t:x:actions[5] -> p:x:@actions[6]"
+        - "write t:x:actions[5] -> p:cover.c:closed"
+        - "consume p:x:@actions[6] -> t:x:actions[6]"
+        - "produce t:x:actions[6] -> p:x:done"
+        - "write t:x:actions[6] -> p:fan.f:off"
+
+  - id: unknown-effect
+    rule: "a call with an unknown effect (toggle, and everything not in the table) writes the * place of its targets, annotation action"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.toggle, target: {entity_id: light.a}}
+        - {action: media_player.media_play, target: {entity_id: [media_player.tv, media_player.radio]}}
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:@actions[1]"
+        - "p:x:done"
+        - "p:light.a:*"
+        - "p:media_player.tv:*"
+        - "p:media_player.radio:*"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: action, annotations: [{action: light.toggle}]}
+        "t:x:actions[1]": {kind: action, annotations: [{action: media_player.media_play}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "write t:x:actions[0] -> p:light.a:*"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:done"
+        - "write t:x:actions[1] -> p:media_player.tv:*"
+        - "write t:x:actions[1] -> p:media_player.radio:*"
+
+  - id: no-entity-target
+    rule: "a call with no entity target (notify.*, persistent_notification.*) has no state arcs, annotation action"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: notify.mobile_app_anna, data: {message: "Door open"}}
+        - {action: persistent_notification.create, data: {message: "Hi"}}
+    expect:
+      places: ["p:x:triggered", "p:x:@actions[1]", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: action, annotations: [{action: notify.mobile_app_anna}]}
+        "t:x:actions[1]": {kind: action, annotations: [{action: persistent_notification.create}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:done"
+
+  # --- waiting --------------------------------------------------------------
+  - id: delay
+    rule: "delay: a wait transition, annotation delay"
+    config:
+      triggers: *time_trigger
+      actions:
+        - delay: {minutes: 3}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: {minutes: 3}}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: wait-for-trigger
+    rule: "wait_for_trigger: a wait transition with the read arcs its triggers would have, annotation timeout"
+    config:
+      triggers: *time_trigger
+      actions:
+        - wait_for_trigger:
+            - {trigger: state, entity_id: binary_sensor.door, to: "on"}
+          timeout: "00:01:00"
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:binary_sensor.door:on"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: wait, annotations: [{timeout: "00:01:00"}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "read p:binary_sensor.door:on -> t:x:actions[0] [trigger]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: wait-template
+    rule: "wait_template: a wait transition, annotation template, opaque"
+    resolver: {}
+    config:
+      triggers: *time_trigger
+      actions:
+        - wait_template: "{{ is_state('light.a', 'on') }}"
+          timeout: 30
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: wait
+          annotations: [{template: "{{ is_state('light.a', 'on') }}"}, {timeout: 30}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["actions[0]"]
+
+  # --- choose, if -----------------------------------------------------------
+  - id: choose
+    rule: "choose: one branch per alternative carrying its conditions, then its steps, all ending in the place after the whole step; the default is a branch too"
+    config:
+      triggers: *time_trigger
+      actions:
+        - choose:
+            - conditions:
+                - {condition: state, entity_id: light.a, state: "on"}
+              sequence:
+                - {action: light.turn_off, target: {entity_id: light.a}}
+            - conditions:
+                - {condition: state, entity_id: light.b, state: "on"}
+              sequence:
+                - {action: light.turn_off, target: {entity_id: light.b}}
+          default:
+            - {action: light.turn_on, target: {entity_id: light.c}}
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:done"
+        - "p:x:@actions[0].choose[0].sequence[0]"
+        - "p:x:@actions[0].choose[1].sequence[0]"
+        - "p:x:@actions[0].default[0]"
+        - "p:light.a:on"
+        - "p:light.a:off"
+        - "p:light.b:on"
+        - "p:light.b:off"
+        - "p:light.c:on"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].choose[0]": {kind: branch}
+        "t:x:actions[0].choose[0].sequence[0]": {kind: action, annotations: [{action: light.turn_off}]}
+        "t:x:actions[0].choose[1]": {kind: branch}
+        "t:x:actions[0].choose[1].sequence[0]": {kind: action, annotations: [{action: light.turn_off}]}
+        "t:x:actions[0].default": {kind: branch}
+        "t:x:actions[0].default[0]": {kind: action, annotations: [{action: light.turn_on}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].choose[0]"
+        - "read p:light.a:on -> t:x:actions[0].choose[0] [condition]"
+        - "produce t:x:actions[0].choose[0] -> p:x:@actions[0].choose[0].sequence[0]"
+        - "consume p:x:@actions[0].choose[0].sequence[0] -> t:x:actions[0].choose[0].sequence[0]"
+        - "produce t:x:actions[0].choose[0].sequence[0] -> p:x:done"
+        - "write t:x:actions[0].choose[0].sequence[0] -> p:light.a:off"
+        - "consume p:x:triggered -> t:x:actions[0].choose[1]"
+        - "read p:light.b:on -> t:x:actions[0].choose[1] [condition]"
+        - "produce t:x:actions[0].choose[1] -> p:x:@actions[0].choose[1].sequence[0]"
+        - "consume p:x:@actions[0].choose[1].sequence[0] -> t:x:actions[0].choose[1].sequence[0]"
+        - "produce t:x:actions[0].choose[1].sequence[0] -> p:x:done"
+        - "write t:x:actions[0].choose[1].sequence[0] -> p:light.b:off"
+        - "consume p:x:triggered -> t:x:actions[0].default"
+        - "produce t:x:actions[0].default -> p:x:@actions[0].default[0]"
+        - "consume p:x:@actions[0].default[0] -> t:x:actions[0].default[0]"
+        - "produce t:x:actions[0].default[0] -> p:x:done"
+        - "write t:x:actions[0].default[0] -> p:light.c:on"
+
+  - id: choose-implicit-default
+    rule: "choose: an implicit empty default is a branch too"
+    config:
+      triggers: *time_trigger
+      actions:
+        - choose:
+            - conditions:
+                - {condition: state, entity_id: light.a, state: "on"}
+              sequence:
+                - delay: "00:00:01"
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:done"
+        - "p:x:@actions[0].choose[0].sequence[0]"
+        - "p:light.a:on"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].choose[0]": {kind: branch}
+        "t:x:actions[0].choose[0].sequence[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:actions[0].default": {kind: branch}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].choose[0]"
+        - "read p:light.a:on -> t:x:actions[0].choose[0] [condition]"
+        - "produce t:x:actions[0].choose[0] -> p:x:@actions[0].choose[0].sequence[0]"
+        - "consume p:x:@actions[0].choose[0].sequence[0] -> t:x:actions[0].choose[0].sequence[0]"
+        - "produce t:x:actions[0].choose[0].sequence[0] -> p:x:done"
+        - "consume p:x:triggered -> t:x:actions[0].default"
+        - "produce t:x:actions[0].default -> p:x:done"
+
+  - id: choose-alternatives-continue-with-the-next-step
+    rule: "choose: the alternatives end in the place after the whole step, here the place before the next step"
+    config:
+      triggers: *time_trigger
+      actions:
+        - choose:
+            - conditions:
+                - {condition: state, entity_id: light.a, state: "on"}
+              sequence:
+                - delay: "00:00:01"
+          default: []
+        - {action: notify.me, data: {message: "x"}}
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:done"
+        - "p:x:@actions[1]"
+        - "p:x:@actions[0].choose[0].sequence[0]"
+        - "p:light.a:on"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].choose[0]": {kind: branch}
+        "t:x:actions[0].choose[0].sequence[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:actions[0].default": {kind: branch}
+        "t:x:actions[1]": {kind: action, annotations: [{action: notify.me}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].choose[0]"
+        - "read p:light.a:on -> t:x:actions[0].choose[0] [condition]"
+        - "produce t:x:actions[0].choose[0] -> p:x:@actions[0].choose[0].sequence[0]"
+        - "consume p:x:@actions[0].choose[0].sequence[0] -> t:x:actions[0].choose[0].sequence[0]"
+        - "produce t:x:actions[0].choose[0].sequence[0] -> p:x:@actions[1]"
+        - "consume p:x:triggered -> t:x:actions[0].default"
+        - "produce t:x:actions[0].default -> p:x:@actions[1]"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:done"
+
+  - id: if-then-else
+    rule: "if: one branch per alternative (then, else), the then branch carrying the if conditions"
+    config:
+      triggers: *time_trigger
+      actions:
+        - if:
+            - {condition: state, entity_id: light.a, state: "on"}
+          then:
+            - {action: light.turn_off, target: {entity_id: light.a}}
+          else:
+            - {action: light.turn_on, target: {entity_id: light.a}}
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:done"
+        - "p:x:@actions[0].then[0]"
+        - "p:x:@actions[0].else[0]"
+        - "p:light.a:on"
+        - "p:light.a:off"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].then": {kind: branch}
+        "t:x:actions[0].then[0]": {kind: action, annotations: [{action: light.turn_off}]}
+        "t:x:actions[0].else": {kind: branch}
+        "t:x:actions[0].else[0]": {kind: action, annotations: [{action: light.turn_on}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].then"
+        - "read p:light.a:on -> t:x:actions[0].then [condition]"
+        - "produce t:x:actions[0].then -> p:x:@actions[0].then[0]"
+        - "consume p:x:@actions[0].then[0] -> t:x:actions[0].then[0]"
+        - "produce t:x:actions[0].then[0] -> p:x:done"
+        - "write t:x:actions[0].then[0] -> p:light.a:off"
+        - "consume p:x:triggered -> t:x:actions[0].else"
+        - "produce t:x:actions[0].else -> p:x:@actions[0].else[0]"
+        - "consume p:x:@actions[0].else[0] -> t:x:actions[0].else[0]"
+        - "produce t:x:actions[0].else[0] -> p:x:done"
+        - "write t:x:actions[0].else[0] -> p:light.a:on"
+
+  - id: if-without-else
+    rule: "if: the implicit empty else is a branch too"
+    config:
+      triggers: *time_trigger
+      actions:
+        - if:
+            - {condition: state, entity_id: light.a, state: "on"}
+          then:
+            - delay: "00:00:01"
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0].then[0]", "p:light.a:on"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].then": {kind: branch}
+        "t:x:actions[0].then[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:actions[0].else": {kind: branch}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].then"
+        - "read p:light.a:on -> t:x:actions[0].then [condition]"
+        - "produce t:x:actions[0].then -> p:x:@actions[0].then[0]"
+        - "consume p:x:@actions[0].then[0] -> t:x:actions[0].then[0]"
+        - "produce t:x:actions[0].then[0] -> p:x:done"
+        - "consume p:x:triggered -> t:x:actions[0].else"
+        - "produce t:x:actions[0].else -> p:x:done"
+
+  # --- parallel, repeat -----------------------------------------------------
+  - id: parallel
+    rule: "parallel: a fork producing the first place of every branch, the branches, and a join consuming their last places"
+    config:
+      triggers: *time_trigger
+      actions:
+        - parallel:
+            - {action: light.turn_on, target: {entity_id: light.a}}
+            - sequence:
+                - {action: light.turn_off, target: {entity_id: light.b}}
+                - delay: "00:00:01"
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:done"
+        - "p:x:@actions[0].parallel[0]"
+        - "p:x:@actions[0].parallel[0]:end"
+        - "p:x:@actions[0].parallel[1]"
+        - "p:x:@actions[0].parallel[1].sequence[1]"
+        - "p:x:@actions[0].parallel[1]:end"
+        - "p:light.a:on"
+        - "p:light.b:off"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]:fork": {kind: fork}
+        "t:x:actions[0].parallel[0]": {kind: action, annotations: [{action: light.turn_on}]}
+        "t:x:actions[0].parallel[1].sequence[0]": {kind: action, annotations: [{action: light.turn_off}]}
+        "t:x:actions[0].parallel[1].sequence[1]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:actions[0]:join": {kind: join}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]:fork"
+        - "produce t:x:actions[0]:fork -> p:x:@actions[0].parallel[0]"
+        - "produce t:x:actions[0]:fork -> p:x:@actions[0].parallel[1]"
+        - "consume p:x:@actions[0].parallel[0] -> t:x:actions[0].parallel[0]"
+        - "produce t:x:actions[0].parallel[0] -> p:x:@actions[0].parallel[0]:end"
+        - "write t:x:actions[0].parallel[0] -> p:light.a:on"
+        - "consume p:x:@actions[0].parallel[1] -> t:x:actions[0].parallel[1].sequence[0]"
+        - "produce t:x:actions[0].parallel[1].sequence[0] -> p:x:@actions[0].parallel[1].sequence[1]"
+        - "write t:x:actions[0].parallel[1].sequence[0] -> p:light.b:off"
+        - "consume p:x:@actions[0].parallel[1].sequence[1] -> t:x:actions[0].parallel[1].sequence[1]"
+        - "produce t:x:actions[0].parallel[1].sequence[1] -> p:x:@actions[0].parallel[1]:end"
+        - "consume p:x:@actions[0].parallel[0]:end -> t:x:actions[0]:join"
+        - "consume p:x:@actions[0].parallel[1]:end -> t:x:actions[0]:join"
+        - "produce t:x:actions[0]:join -> p:x:done"
+
+  - id: repeat-count
+    rule: "repeat: the body, then `loop` back to its first place and `exit` to the place after the step; the count is an annotation on both"
+    config:
+      triggers: *time_trigger
+      actions:
+        - repeat:
+            count: 3
+            sequence:
+              - {action: light.toggle, target: {entity_id: light.a}}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]:end", "p:light.a:*"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].repeat.sequence[0]": {kind: action, annotations: [{action: light.toggle}]}
+        "t:x:actions[0]:loop": {kind: loop, annotations: [{repeat: {count: 3}}]}
+        "t:x:actions[0]:exit": {kind: exit, annotations: [{repeat: {count: 3}}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].repeat.sequence[0]"
+        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:@actions[0]:end"
+        - "write t:x:actions[0].repeat.sequence[0] -> p:light.a:*"
+        - "consume p:x:@actions[0]:end -> t:x:actions[0]:loop"
+        - "produce t:x:actions[0]:loop -> p:x:triggered"
+        - "consume p:x:@actions[0]:end -> t:x:actions[0]:exit"
+        - "produce t:x:actions[0]:exit -> p:x:done"
+
+  - id: repeat-while
+    rule: "repeat: the while conditions are guards on the transition that goes round again"
+    config:
+      triggers: *time_trigger
+      actions:
+        - repeat:
+            while:
+              - {condition: state, entity_id: light.a, state: "on"}
+            sequence:
+              - delay: "00:00:10"
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]:end", "p:light.a:on"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].repeat.sequence[0]": {kind: wait, annotations: [{delay: "00:00:10"}]}
+        "t:x:actions[0]:loop": {kind: loop}
+        "t:x:actions[0]:exit": {kind: exit}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].repeat.sequence[0]"
+        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:@actions[0]:end"
+        - "consume p:x:@actions[0]:end -> t:x:actions[0]:loop"
+        - "read p:light.a:on -> t:x:actions[0]:loop [condition]"
+        - "produce t:x:actions[0]:loop -> p:x:triggered"
+        - "consume p:x:@actions[0]:end -> t:x:actions[0]:exit"
+        - "produce t:x:actions[0]:exit -> p:x:done"
+
+  - id: repeat-until
+    rule: "repeat: the until conditions are guards on the transition that leaves"
+    config:
+      triggers: *time_trigger
+      actions:
+        - repeat:
+            until:
+              - {condition: numeric_state, entity_id: sensor.t, above: 20}
+            sequence:
+              - delay: "00:00:10"
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:x:@actions[0]:end", "p:sensor.t:*"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0].repeat.sequence[0]": {kind: wait, annotations: [{delay: "00:00:10"}]}
+        "t:x:actions[0]:loop": {kind: loop}
+        "t:x:actions[0]:exit":
+          kind: exit
+          annotations: [{guard: {condition: numeric_state, above: 20}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0].repeat.sequence[0]"
+        - "produce t:x:actions[0].repeat.sequence[0] -> p:x:@actions[0]:end"
+        - "consume p:x:@actions[0]:end -> t:x:actions[0]:loop"
+        - "produce t:x:actions[0]:loop -> p:x:triggered"
+        - "consume p:x:@actions[0]:end -> t:x:actions[0]:exit"
+        - "read p:sensor.t:* -> t:x:actions[0]:exit [condition]"
+        - "produce t:x:actions[0]:exit -> p:x:done"
+
+  # --- condition, stop and the steps without an effect ----------------------
+  - id: condition-step
+    rule: "condition as a step: a skip onward carrying the condition, and a stop to done for when it does not hold"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {condition: state, entity_id: light.a, state: "on"}
+        - {action: light.turn_off, target: {entity_id: light.a}}
+    expect:
+      places: ["p:x:triggered", "p:x:@actions[1]", "p:x:done", "p:light.a:on", "p:light.a:off"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: skip}
+        "t:x:actions[0]:stop": {kind: stop}
+        "t:x:actions[1]": {kind: action, annotations: [{action: light.turn_off}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "read p:light.a:on -> t:x:actions[0] [condition]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "consume p:x:triggered -> t:x:actions[0]:stop"
+        - "produce t:x:actions[0]:stop -> p:x:done"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:done"
+        - "write t:x:actions[1] -> p:light.a:off"
+
+  - id: stop
+    rule: "stop: a stop transition to done"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {stop: "Nobody home", error: true}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: stop
+          annotations: [{stop: {reason: "Nobody home", error: true}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: steps-after-stop-are-not-translated
+    rule: "steps after a stop could never run; they are left out and listed as opaque (workflow-net property)"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {stop: "enough"}
+        - {action: light.turn_on, target: {entity_id: light.a}}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: stop, annotations: [{stop: {reason: enough}}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["actions[1]"]
+
+  - id: variables-event-sequence-conversation-response
+    rule: "variables, event, sequence, set_conversation_response: sequence is flattened, event is a skip with annotation fires_event, the others are skips"
+    config:
+      triggers: *time_trigger
+      actions:
+        - variables: {a: 1}
+        - {event: my_event, event_data: {a: 1}}
+        - sequence:
+            - delay: "00:00:01"
+            - variables: {b: 2}
+        - set_conversation_response: "ok"
+    expect:
+      places:
+        - "p:x:triggered"
+        - "p:x:@actions[1]"
+        - "p:x:@actions[2]"
+        - "p:x:@actions[2].sequence[1]"
+        - "p:x:@actions[3]"
+        - "p:x:done"
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: skip}
+        "t:x:actions[1]": {kind: skip, annotations: [{fires_event: my_event}]}
+        "t:x:actions[2].sequence[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+        "t:x:actions[2].sequence[1]": {kind: skip}
+        "t:x:actions[3]": {kind: skip}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:@actions[2]"
+        - "consume p:x:@actions[2] -> t:x:actions[2].sequence[0]"
+        - "produce t:x:actions[2].sequence[0] -> p:x:@actions[2].sequence[1]"
+        - "consume p:x:@actions[2].sequence[1] -> t:x:actions[2].sequence[1]"
+        - "produce t:x:actions[2].sequence[1] -> p:x:@actions[3]"
+        - "consume p:x:@actions[3] -> t:x:actions[3]"
+        - "produce t:x:actions[3] -> p:x:done"
+
+  - id: any-other-step
+    rule: "any other step: a skip, opaque"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {device_id: abc123, domain: light, type: turn_on, entity_id: 0b1c2d}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: skip}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["actions[0]"]
+
+  # --- indirection ----------------------------------------------------------
+  - id: indirection
+    rule: "calls to scripts, scenes and other automations: an action transition with annotation calls, effects not followed, opaque"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: script.good_night}
+        - {action: script.turn_on, target: {entity_id: script.movie_mode}}
+        - {action: scene.turn_on, target: {entity_id: scene.evening}}
+        - {action: automation.trigger, target: {entity_id: automation.other}}
+    expect:
+      places: ["p:x:triggered", "p:x:@actions[1]", "p:x:@actions[2]", "p:x:@actions[3]", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          {kind: action, annotations: [{action: script.good_night}, {calls: [script.good_night]}]}
+        "t:x:actions[1]":
+          {kind: action, annotations: [{action: script.turn_on}, {calls: [script.movie_mode]}]}
+        "t:x:actions[2]":
+          {kind: action, annotations: [{action: scene.turn_on}, {calls: [scene.evening]}]}
+        "t:x:actions[3]":
+          {kind: action, annotations: [{action: automation.trigger}, {calls: [automation.other]}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:@actions[2]"
+        - "consume p:x:@actions[2] -> t:x:actions[2]"
+        - "produce t:x:actions[2] -> p:x:@actions[3]"
+        - "consume p:x:@actions[3] -> t:x:actions[3]"
+        - "produce t:x:actions[3] -> p:x:done"
+      opaque: ["actions[0]", "actions[1]", "actions[2]", "actions[3]"]
+
+  # --- targets --------------------------------------------------------------
+  - id: target-by-area
+    rule: "targets by area are resolved at translation time and annotated resolved_from"
+    resolver:
+      targets:
+        "area_id:flur": [light.b, light.a, sensor.motion]
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, target: {area_id: flur}}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.b:on"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations:
+            - {action: light.turn_on}
+            - {resolved_from: {kind: area_id, id: flur, entities: [light.a, light.b]}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+        - "write t:x:actions[0] -> p:light.a:on"
+        - "write t:x:actions[0] -> p:light.b:on"
+
+  - id: target-by-floor
+    rule: "targets by floor are resolved and annotated resolved_from"
+    resolver:
+      targets:
+        "floor_id:ground": [light.c]
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_off, target: {floor_id: ground}}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.c:off"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations:
+            - {action: light.turn_off}
+            - {resolved_from: {kind: floor_id, id: ground, entities: [light.c]}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+        - "write t:x:actions[0] -> p:light.c:off"
+
+  - id: target-by-label
+    rule: "targets by label are resolved and annotated resolved_from"
+    resolver:
+      targets:
+        "label_id:night": [light.d, switch.s]
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: homeassistant.turn_off, target: {label_id: night}}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.d:off", "p:switch.s:off"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations:
+            - {action: homeassistant.turn_off}
+            - {resolved_from: {kind: label_id, id: night, entities: [light.d, switch.s]}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+        - "write t:x:actions[0] -> p:light.d:off"
+        - "write t:x:actions[0] -> p:switch.s:off"
+
+  - id: target-by-device
+    rule: "targets by device are resolved and annotated resolved_from"
+    resolver:
+      targets:
+        "device_id:dev1": [light.e, sensor.e_power]
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, target: {device_id: dev1}}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.e:on"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations:
+            - {action: light.turn_on}
+            - {resolved_from: {kind: device_id, id: dev1, entities: [light.e]}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+        - "write t:x:actions[0] -> p:light.e:on"
+
+  - id: target-by-area-without-resolver
+    rule: "without a resolver, targets by area are recorded as opaque"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, target: {area_id: flur}}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations: [{action: light.turn_on}, {target: {area_id: [flur]}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["actions[0].target"]
+
+  - id: target-by-unknown-area
+    rule: "a target the resolver does not know is opaque too"
+    resolver: {}
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, target: {area_id: nowhere}}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations: [{action: light.turn_on}, {target: {area_id: [nowhere]}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["actions[0].target"]
+
+  - id: target-direct-and-by-area
+    rule: "entities named directly are used as they are, next to resolved ones"
+    resolver:
+      targets:
+        "area_id:flur": [light.a]
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, target: {entity_id: light.z, area_id: flur}}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.z:on"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations:
+            - {action: light.turn_on}
+            - {resolved_from: {kind: area_id, id: flur, entities: [light.a]}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+        - "write t:x:actions[0] -> p:light.a:on"
+        - "write t:x:actions[0] -> p:light.z:on"
+
+  - id: target-in-data-and-step-level
+    rule: "entity_id given in `data` or on the step itself is a target too"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, data: {entity_id: light.a, brightness: 100}}
+        - {action: light.turn_off, entity_id: "light.b, light.c"}
+    expect:
+      places: ["p:x:triggered", "p:x:@actions[1]", "p:x:done", "p:light.a:on", "p:light.b:off", "p:light.c:off"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: action, annotations: [{action: light.turn_on}]}
+        "t:x:actions[1]": {kind: action, annotations: [{action: light.turn_off}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "write t:x:actions[0] -> p:light.a:on"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:done"
+        - "write t:x:actions[1] -> p:light.b:off"
+        - "write t:x:actions[1] -> p:light.c:off"
+
+  - id: templated-action-and-target
+    rule: "a templated action name or target cannot be followed: opaque, writes the * place of the entities that are named"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: "{{ states('input_text.service') }}", target: {entity_id: light.a}}
+        - {action: light.turn_on, target: {entity_id: "{{ states('input_text.lamp') }}"}}
+    expect:
+      places: ["p:x:triggered", "p:x:@actions[1]", "p:x:done", "p:light.a:*"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]":
+          kind: action
+          annotations: [{action: "{{ states('input_text.service') }}"}]
+        "t:x:actions[1]": {kind: action, annotations: [{action: light.turn_on}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:@actions[1]"
+        - "write t:x:actions[0] -> p:light.a:*"
+        - "consume p:x:@actions[1] -> t:x:actions[1]"
+        - "produce t:x:actions[1] -> p:x:done"
+      opaque: ["actions[0]", "actions[1].target"]
+
+  # --- details the document does not spell out ------------------------------
+  - id: legacy-spelling
+    rule: "the older spelling (trigger/platform, condition, action/service) is read and gets the same ids"
+    config:
+      alias: Old style
+      trigger:
+        - {platform: state, entity_id: light.a, to: "on"}
+      condition:
+        - {condition: state, entity_id: light.b, state: "off"}
+      action:
+        - {service: light.turn_off, entity_id: light.a}
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.a:off", "p:light.b:off"]
+      transitions:
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:actions[0]": {kind: action, annotations: [{action: light.turn_off}]}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [trigger]"
+        - "read p:light.b:off -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+        - "write t:x:actions[0] -> p:light.a:off"
+
+  - id: yaml-booleans-are-states
+    rule: "YAML reads an unquoted on/off as a boolean; it is the state on/off"
+    config:
+      triggers:
+        - {trigger: state, entity_id: light.a, to: true}
+      conditions:
+        - {condition: state, entity_id: light.b, state: false}
+      actions:
+        - delay: "00:00:01"
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:light.b:off"]
+      transitions:
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [trigger]"
+        - "read p:light.b:off -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: attribute-trigger-collapses-to-the-any-place
+    rule: "limit 3 (values): attributes collapse into the * place of the entity plus an annotation"
+    config:
+      triggers:
+        - {trigger: state, entity_id: climate.c, attribute: current_temperature, to: 21}
+      actions:
+        - delay: "00:00:01"
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:climate.c:*"]
+      transitions:
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations: [{mode: single}, {attribute: current_temperature}, {to: 21}]
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+      arcs:
+        - "read p:climate.c:* -> t:x:triggers[0] [trigger]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: disabled-step
+    rule: "a step with enabled: false does nothing: a skip"
+    config:
+      triggers: *time_trigger
+      actions:
+        - {action: light.turn_on, target: {entity_id: light.a}, enabled: false}
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions[0]": {kind: skip, annotations: [{disabled: true}]}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: disabled-trigger
+    rule: "a trigger with enabled: false cannot start a run: no transition"
+    config:
+      triggers:
+        - {trigger: time, at: "07:00:00", enabled: false}
+        - {trigger: time, at: "08:00:00"}
+      actions:
+        - delay: "00:00:01"
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        "t:x:triggers[1]":
+          kind: trigger
+          annotations: [{mode: single}, {event: {platform: time, at: "08:00:00"}}]
+        "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+      arcs:
+        - "produce t:x:triggers[1] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: no-actions
+    rule: "an automation without actions still has a path from triggered to done: one skip"
+    config:
+      triggers: *time_trigger
+      actions: []
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *time_t
+        "t:x:actions": {kind: skip}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions"
+        - "produce t:x:actions -> p:x:done"

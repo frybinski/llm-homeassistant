@@ -1,0 +1,104 @@
+# The example automations of frontend/src/demo (automations.json and the
+# proposal in changesets.json), translated to version 1. Written by hand from
+# docs/net-mapping.md; the configurations are read from the JSON files.
+
+nachtruhe_flur:
+  mode: single
+  places:
+    - "p:nachtruhe_flur:triggered"
+    - "p:nachtruhe_flur:done"
+    - "p:light.flurlicht:on"
+    - "p:light.flurlicht:off"
+    - "p:input_boolean.nachtmodus:on"
+  transitions:
+    "t:nachtruhe_flur:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+    "t:nachtruhe_flur:actions[0]": {kind: action, annotations: [{action: light.turn_off}]}
+  arcs:
+    - "read p:light.flurlicht:on -> t:nachtruhe_flur:triggers[0] [trigger]"
+    - "read p:input_boolean.nachtmodus:on -> t:nachtruhe_flur:triggers[0] [condition]"
+    - "produce t:nachtruhe_flur:triggers[0] -> p:nachtruhe_flur:triggered"
+    - "consume p:nachtruhe_flur:triggered -> t:nachtruhe_flur:actions[0]"
+    - "produce t:nachtruhe_flur:actions[0] -> p:nachtruhe_flur:done"
+    - "write t:nachtruhe_flur:actions[0] -> p:light.flurlicht:off"
+
+kuechenlicht_bewegung:
+  mode: restart
+  places:
+    - "p:kuechenlicht_bewegung:triggered"
+    - "p:kuechenlicht_bewegung:@actions[1]"
+    - "p:kuechenlicht_bewegung:@actions[2]"
+    - "p:kuechenlicht_bewegung:done"
+    - "p:binary_sensor.kueche_bewegungsmelder:on"
+    - "p:light.kueche_arbeitslicht:on"
+    - "p:light.kueche_arbeitslicht:off"
+  transitions:
+    "t:kuechenlicht_bewegung:triggers[0]": {kind: trigger, annotations: [{mode: restart}]}
+    "t:kuechenlicht_bewegung:actions[0]": {kind: action, annotations: [{action: light.turn_on}]}
+    "t:kuechenlicht_bewegung:actions[1]": {kind: wait, annotations: [{delay: "00:05:00"}]}
+    "t:kuechenlicht_bewegung:actions[2]": {kind: action, annotations: [{action: light.turn_off}]}
+  arcs:
+    - "read p:binary_sensor.kueche_bewegungsmelder:on -> t:kuechenlicht_bewegung:triggers[0] [trigger]"
+    - "produce t:kuechenlicht_bewegung:triggers[0] -> p:kuechenlicht_bewegung:triggered"
+    - "consume p:kuechenlicht_bewegung:triggered -> t:kuechenlicht_bewegung:actions[0]"
+    - "produce t:kuechenlicht_bewegung:actions[0] -> p:kuechenlicht_bewegung:@actions[1]"
+    - "write t:kuechenlicht_bewegung:actions[0] -> p:light.kueche_arbeitslicht:on"
+    - "consume p:kuechenlicht_bewegung:@actions[1] -> t:kuechenlicht_bewegung:actions[1]"
+    - "produce t:kuechenlicht_bewegung:actions[1] -> p:kuechenlicht_bewegung:@actions[2]"
+    - "consume p:kuechenlicht_bewegung:@actions[2] -> t:kuechenlicht_bewegung:actions[2]"
+    - "produce t:kuechenlicht_bewegung:actions[2] -> p:kuechenlicht_bewegung:done"
+    - "write t:kuechenlicht_bewegung:actions[2] -> p:light.kueche_arbeitslicht:off"
+
+kinoabend:
+  mode: single
+  places:
+    - "p:kinoabend:triggered"
+    - "p:kinoabend:@actions[1]"
+    - "p:kinoabend:done"
+    - "p:media_player.wohnzimmer_tv:playing"
+    - "p:sun.sun:below_horizon"
+    - "p:light.wohnzimmer_deckenlicht:off"
+    - "p:light.wohnzimmer_stehlampe:on"
+  transitions:
+    "t:kinoabend:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+    "t:kinoabend:actions[0]": {kind: action, annotations: [{action: light.turn_off}]}
+    "t:kinoabend:actions[1]": {kind: action, annotations: [{action: light.turn_on}]}
+  arcs:
+    - "read p:media_player.wohnzimmer_tv:playing -> t:kinoabend:triggers[0] [trigger]"
+    - "read p:sun.sun:below_horizon -> t:kinoabend:triggers[0] [condition]"
+    - "produce t:kinoabend:triggers[0] -> p:kinoabend:triggered"
+    - "consume p:kinoabend:triggered -> t:kinoabend:actions[0]"
+    - "produce t:kinoabend:actions[0] -> p:kinoabend:@actions[1]"
+    - "write t:kinoabend:actions[0] -> p:light.wohnzimmer_deckenlicht:off"
+    - "consume p:kinoabend:@actions[1] -> t:kinoabend:actions[1]"
+    - "produce t:kinoabend:actions[1] -> p:kinoabend:done"
+    - "write t:kinoabend:actions[1] -> p:light.wohnzimmer_stehlampe:on"
+
+# The proposal of the demo change set cs_demo_flurlicht.
+flurlicht_bewegung:
+  mode: restart
+  places:
+    - "p:flurlicht_bewegung:triggered"
+    - "p:flurlicht_bewegung:@actions[1]"
+    - "p:flurlicht_bewegung:@actions[2]"
+    - "p:flurlicht_bewegung:done"
+    - "p:binary_sensor.flur_bewegungsmelder:on"
+    - "p:sun.sun:below_horizon"
+    - "p:light.flurlicht:on"
+    - "p:light.flurlicht:off"
+  transitions:
+    "t:flurlicht_bewegung:triggers[0]": {kind: trigger, annotations: [{mode: restart}]}
+    "t:flurlicht_bewegung:actions[0]": {kind: action, annotations: [{action: light.turn_on}]}
+    "t:flurlicht_bewegung:actions[1]": {kind: wait, annotations: [{delay: "00:03:00"}]}
+    "t:flurlicht_bewegung:actions[2]": {kind: action, annotations: [{action: light.turn_off}]}
+  arcs:
+    - "read p:binary_sensor.flur_bewegungsmelder:on -> t:flurlicht_bewegung:triggers[0] [trigger]"
+    - "read p:sun.sun:below_horizon -> t:flurlicht_bewegung:triggers[0] [condition]"
+    - "produce t:flurlicht_bewegung:triggers[0] -> p:flurlicht_bewegung:triggered"
+    - "consume p:flurlicht_bewegung:triggered -> t:flurlicht_bewegung:actions[0]"
+    - "produce t:flurlicht_bewegung:actions[0] -> p:flurlicht_bewegung:@actions[1]"
+    - "write t:flurlicht_bewegung:actions[0] -> p:light.flurlicht:on"
+    - "consume p:flurlicht_bewegung:@actions[1] -> t:flurlicht_bewegung:actions[1]"
+    - "produce t:flurlicht_bewegung:actions[1] -> p:flurlicht_bewegung:@actions[2]"
+    - "consume p:flurlicht_bewegung:@actions[2] -> t:flurlicht_bewegung:actions[2]"
+    - "produce t:flurlicht_bewegung:actions[2] -> p:flurlicht_bewegung:done"
+    - "write t:flurlicht_bewegung:actions[2] -> p:light.flurlicht:off"

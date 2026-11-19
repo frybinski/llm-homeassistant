@@ -1,0 +1,344 @@
+# One case per row of the specification's condition table (docs/net-mapping.md,
+# "Mapping rules / Conditions of the automation"). Written by hand from the
+# document. See triggers.yaml for the format.
+#
+# The conditions of the automation attach to every trigger transition: as read
+# arcs with role `condition` and as `guard` annotations. All cases use one time
+# trigger and the same single `delay` step.
+
+defs:
+  time_trigger: &time_trigger
+    - {trigger: time, at: "07:00:00"}
+  tail_actions: &tail_actions
+    - delay: "00:00:01"
+  tail_transition: &tail_transition
+    "t:x:actions[0]": {kind: wait, annotations: [{delay: "00:00:01"}]}
+  time_event: &time_event {event: {platform: time, at: "07:00:00"}}
+
+cases:
+  - id: state
+    rule: "state: read arc (role condition) from each p:<entity>:<state>"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: state, entity_id: light.a, state: "on"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}, *time_event]}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: state-several-entities
+    rule: "state: a read arc from each p:<entity>:<state>, for every entity"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: state, entity_id: [light.a, light.b], state: "off"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:off", "p:light.b:off"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}, *time_event]}
+      arcs:
+        - "read p:light.a:off -> t:x:triggers[0] [condition]"
+        - "read p:light.b:off -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: numeric-state
+    rule: "numeric_state: read arc from p:<entity>:*, annotation guard"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: numeric_state, entity_id: sensor.t, above: 5}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:sensor.t:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: numeric_state, above: 5}}
+      arcs:
+        - "read p:sensor.t:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: sun
+    rule: "sun: annotation guard, and a read arc from p:sun.sun:*"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: sun, after: sunset, after_offset: "-00:30:00"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:sun.sun:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: sun, after: sunset, after_offset: "-00:30:00"}}
+      arcs:
+        - "read p:sun.sun:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: time
+    rule: "time: annotation guard, no read arc"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: time, after: "22:00:00", before: "06:00:00", weekday: [mon, tue]}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: time, after: "22:00:00", before: "06:00:00", weekday: [mon, tue]}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: zone
+    rule: "zone: annotation guard, and a read arc from p:<entity>:*"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: zone, entity_id: person.anna, zone: zone.home}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:person.anna:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: zone, zone: zone.home}}
+      arcs:
+        - "read p:person.anna:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: trigger
+    rule: "trigger: annotation guard, no read arc"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: trigger, id: morning}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations: [{mode: single}, *time_event, {guard: {condition: trigger, id: morning}}]
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: template
+    rule: "template: annotation guard with the template, read arcs where entities can be determined, opaque"
+    resolver: {}
+    config:
+      triggers: *time_trigger
+      conditions:
+        - {condition: template, value_template: "{{ states('sensor.t') | float > 20 }}"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:sensor.t:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: template, value_template: "{{ states('sensor.t') | float > 20 }}"}}
+      arcs:
+        - "read p:sensor.t:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["conditions[0]"]
+
+  - id: template-shorthand-without-resolver
+    rule: "template, written as a bare string and without a resolver: guard and opaque, no read arc"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - "{{ now().hour > 5 }}"
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: template, value_template: "{{ now().hour > 5 }}"}}
+      arcs:
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["conditions[0]"]
+
+  - id: and
+    rule: "and: its parts, as if listed directly"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - condition: and
+          conditions:
+            - {condition: state, entity_id: light.a, state: "on"}
+            - {condition: numeric_state, entity_id: sensor.t, below: 10}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on", "p:sensor.t:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - {guard: {condition: numeric_state, below: 10}}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [condition]"
+        - "read p:sensor.t:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: or
+    rule: "or: annotation guard holding the condition, read arcs from p:<entity>:* for the entities inside, opaque"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - condition: or
+          conditions:
+            - {condition: state, entity_id: light.a, state: "on"}
+            - {condition: state, entity_id: light.b, state: "on"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:*", "p:light.b:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - guard:
+                condition: or
+                conditions:
+                  - {condition: state, entity_id: light.a, state: "on"}
+                  - {condition: state, entity_id: light.b, state: "on"}
+      arcs:
+        - "read p:light.a:* -> t:x:triggers[0] [condition]"
+        - "read p:light.b:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["conditions[0]"]
+
+  - id: not
+    rule: "not: annotation guard holding the condition, read arcs from p:<entity>:* for the entities inside, opaque"
+    config:
+      triggers: *time_trigger
+      conditions:
+        - condition: not
+          conditions:
+            - {condition: state, entity_id: input_boolean.guest, state: "on"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:input_boolean.guest:*"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]":
+          kind: trigger
+          annotations:
+            - {mode: single}
+            - *time_event
+            - guard:
+                condition: not
+                conditions:
+                  - {condition: state, entity_id: input_boolean.guest, state: "on"}
+      arcs:
+        - "read p:input_boolean.guest:* -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+      opaque: ["conditions[0]"]
+
+  - id: conditions-attach-to-every-trigger
+    rule: "conditions attach to every trigger transition, because a run only starts when they hold"
+    config:
+      triggers:
+        - {trigger: state, entity_id: binary_sensor.m, to: "on"}
+        - {trigger: time, at: "07:00:00"}
+      conditions:
+        - {condition: state, entity_id: light.a, state: "off"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:binary_sensor.m:on", "p:light.a:off"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+        "t:x:triggers[1]": {kind: trigger, annotations: [{mode: single}, *time_event]}
+      arcs:
+        - "read p:binary_sensor.m:on -> t:x:triggers[0] [trigger]"
+        - "read p:light.a:off -> t:x:triggers[0] [condition]"
+        - "read p:light.a:off -> t:x:triggers[1] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "produce t:x:triggers[1] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"
+
+  - id: condition-on-the-triggers-own-entity-stays-distinct
+    rule: "a condition on the trigger's own entity is a second read arc with the other role"
+    config:
+      triggers:
+        - {trigger: state, entity_id: light.a, to: "on"}
+      conditions:
+        - {condition: state, entity_id: light.a, state: "on"}
+      actions: *tail_actions
+    expect:
+      places: ["p:x:triggered", "p:x:done", "p:light.a:on"]
+      transitions:
+        <<: *tail_transition
+        "t:x:triggers[0]": {kind: trigger, annotations: [{mode: single}]}
+      arcs:
+        - "read p:light.a:on -> t:x:triggers[0] [trigger]"
+        - "read p:light.a:on -> t:x:triggers[0] [condition]"
+        - "produce t:x:triggers[0] -> p:x:triggered"
+        - "consume p:x:triggered -> t:x:actions[0]"
+        - "produce t:x:actions[0] -> p:x:done"

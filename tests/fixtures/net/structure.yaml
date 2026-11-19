@@ -1,0 +1,124 @@
+# Larger automations, only checked for the structural properties (no expected
+# net): validate(), the workflow-net property, origins, complete <-> opaque.
+
+cases:
+  - id: nested-everything
+    config:
+      alias: Nested
+      mode: queued
+      triggers:
+        - {trigger: state, entity_id: binary_sensor.door, to: "on", for: "00:00:10"}
+        - {trigger: sun, event: sunset}
+      conditions:
+        - condition: or
+          conditions:
+            - {condition: state, entity_id: person.a, state: home}
+            - {condition: state, entity_id: person.b, state: home}
+        - {condition: time, after: "18:00:00"}
+      actions:
+        - parallel:
+            - sequence:
+                - repeat:
+                    count: 3
+                    sequence:
+                      - {action: light.toggle, target: {entity_id: light.a}}
+                      - delay: "00:00:01"
+                - {action: light.turn_off, target: {entity_id: light.a}}
+            - choose:
+                - conditions: "{{ is_state('sensor.x', 'high') }}"
+                  sequence:
+                    - {action: notify.me, data: {message: high}}
+                    - {stop: "done early"}
+              default:
+                - if:
+                    - {condition: state, entity_id: light.b, state: "on"}
+                  then:
+                    - {action: light.turn_off, target: {entity_id: light.b}}
+                  else:
+                    - {condition: state, entity_id: light.c, state: "on"}
+                    - {action: light.turn_off, target: {entity_id: light.c}}
+        - {wait_for_trigger: [{trigger: state, entity_id: binary_sensor.door, to: "off"}], timeout: "00:05:00"}
+        - {action: script.close_up}
+
+  - id: choose-where-every-alternative-stops
+    config:
+      triggers: [{trigger: time, at: "07:00:00"}]
+      actions:
+        - choose:
+            - conditions: [{condition: state, entity_id: light.a, state: "on"}]
+              sequence: [{stop: "a"}]
+          default: [{stop: "b"}]
+        - {action: light.turn_on, target: {entity_id: light.z}}
+
+  - id: stop-in-a-parallel-branch
+    config:
+      triggers: [{trigger: time, at: "07:00:00"}]
+      actions:
+        - parallel:
+            - {stop: "branch ends the run"}
+            - {delay: "00:00:01"}
+        - {action: light.turn_on, target: {entity_id: light.z}}
+
+  - id: all-parallel-branches-stop
+    config:
+      triggers: [{trigger: time, at: "07:00:00"}]
+      actions:
+        - parallel:
+            - {stop: "one"}
+            - {stop: "two"}
+
+  - id: repeat-with-a-body-that-stops
+    config:
+      triggers: [{trigger: time, at: "07:00:00"}]
+      actions:
+        - repeat:
+            count: 2
+            sequence:
+              - {stop: "never loops"}
+        - {delay: "00:00:01"}
+
+  - id: empty-structures
+    config:
+      triggers: [{trigger: time, at: "07:00:00"}]
+      actions:
+        - choose: []
+        - parallel: []
+        - repeat: {count: 2, sequence: []}
+        - sequence: []
+        - if: []
+          then: []
+
+  - id: condition-steps-in-branches
+    config:
+      triggers: [{trigger: time, at: "07:00:00"}]
+      actions:
+        - if:
+            - {condition: state, entity_id: light.a, state: "on"}
+          then:
+            - {condition: numeric_state, entity_id: sensor.t, above: 3}
+            - {action: light.turn_off, target: {entity_id: light.a}}
+        - parallel:
+            - sequence:
+                - {condition: state, entity_id: light.b, state: "on"}
+                - {delay: "00:00:01"}
+            - {delay: "00:00:02"}
+
+  - id: unreadable-shapes
+    config:
+      triggers:
+        - "not a mapping"
+        - {foo: bar}
+        - {trigger: state}
+      conditions:
+        - {condition: frobnicate}
+        - 42
+      actions:
+        - "also not a mapping"
+        - {frobnicate: 1}
+        - {choose: [7], default: 8}
+        - {repeat: 3}
+        - {wait_for_trigger: ["x", {trigger: state, entity_id: light.a}]}
+
+  - id: only-triggers
+    config:
+      triggers: [{trigger: homeassistant, event: start}]

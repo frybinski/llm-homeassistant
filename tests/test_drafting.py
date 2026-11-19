@@ -31,10 +31,14 @@ from custom_components.ai_drafts.context import (
 )
 from custom_components.ai_drafts.drafting import (
     AITaskClient,
+    CannotConnectError,
+    InvalidAuthError,
     MalformedOutputError,
     ModelError,
+    NotOpenAICompatibleError,
     OpenAICompatibleClient,
     async_client_from_entry_data,
+    async_list_models,
     build_ai_task_structure,
     build_prompts,
     parse_operations,
@@ -250,6 +254,112 @@ async def test_openai_non_2xx_is_a_model_error(
         await client.async_generate("s", "u")
     assert "sk-secret" not in str(err.value)
     assert aioclient_mock.call_count == 1  # only a 400 is retried
+
+
+@pytest.mark.parametrize("status", [404, 405])
+async def test_openai_404_405_name_the_url_and_hint(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, status: int
+) -> None:
+    aioclient_mock.post(
+        "http://owui.test/ollama/chat/completions",
+        status=status,
+        text='{"detail":"Method Not Allowed"}',
+    )
+    client = OpenAICompatibleClient(hass, "http://owui.test/ollama", "m1", "sk-secret")
+    with pytest.raises(ModelError) as err:
+        await client.async_generate("s", "u")
+    message = str(err.value)
+    assert f"HTTP {status}" in message
+    assert "http://owui.test/ollama/chat/completions" in message
+    assert "/v1" in message
+    assert "<server>/api" in message
+    assert "sk-secret" not in message
+
+
+@pytest.mark.parametrize("status", [401, 403])
+async def test_openai_401_403_say_the_key_was_rejected(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, status: int
+) -> None:
+    aioclient_mock.post(URL, status=status, text="sk-secret is wrong")
+    client = OpenAICompatibleClient(hass, "http://model.test/v1", "m1", "sk-secret")
+    with pytest.raises(ModelError) as err:
+        await client.async_generate("s", "u")
+    message = str(err.value)
+    assert "rejected the API key" in message
+    assert f"HTTP {status}" in message
+    assert "sk-secret" not in message
+    assert aioclient_mock.call_count == 1
+
+
+# --- async_list_models ------------------------------------------------------------
+
+MODELS_URL = "http://model.test/v1/models"
+
+
+async def test_list_models_returns_ids_and_sends_the_key(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    aioclient_mock.get(
+        MODELS_URL,
+        json={"data": [{"id": "a"}, {"id": "b"}, {"id": "a"}, {"nope": 1}, "x"]},
+    )
+    models = await async_list_models(hass, "http://model.test/v1/", "sk-abc")
+    assert models == ["a", "b"]
+    assert aioclient_mock.mock_calls[0][3]["Authorization"] == "Bearer sk-abc"
+
+
+async def test_list_models_without_key_sends_no_authorization(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    aioclient_mock.get(MODELS_URL, json={"data": []})
+    assert await async_list_models(hass, "http://model.test/v1") == []
+    assert "Authorization" not in aioclient_mock.mock_calls[0][3]
+
+
+@pytest.mark.parametrize(
+    ("mock_kwargs", "error"),
+    [
+        ({"exc": aiohttp.ClientConnectionError("refused")}, CannotConnectError),
+        ({"exc": OSError("unreachable")}, CannotConnectError),
+        ({"status": 500, "text": "boom"}, CannotConnectError),
+        ({"status": 401}, InvalidAuthError),
+        ({"status": 403}, InvalidAuthError),
+        ({"status": 404}, NotOpenAICompatibleError),
+        ({"status": 405}, NotOpenAICompatibleError),
+        ({"text": "not json"}, NotOpenAICompatibleError),
+        ({"json": {"object": "list"}}, NotOpenAICompatibleError),
+        ({"json": {"data": {}}}, NotOpenAICompatibleError),
+        ({"json": [1]}, NotOpenAICompatibleError),
+    ],
+)
+async def test_list_models_errors_never_contain_the_key(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    mock_kwargs: dict[str, Any],
+    error: type[Exception],
+) -> None:
+    aioclient_mock.get(MODELS_URL, **mock_kwargs)
+    with pytest.raises(error) as err:
+        await async_list_models(hass, "http://model.test/v1", "sk-secret")
+    assert "sk-secret" not in str(err.value)
+
+
+async def test_list_models_timeout_is_cannot_connect(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    async def slow(method: str, url: Any, data: Any) -> Any:
+        await asyncio.sleep(5)
+
+    aioclient_mock.get(MODELS_URL, side_effect=slow)
+    with (
+        patch.object(drafting, "MODELS_TIMEOUT", 0.05),
+        pytest.raises(CannotConnectError, match="within"),
+    ):
+        await async_list_models(hass, "http://model.test/v1")
+
+
+def test_models_timeout_is_15_seconds() -> None:
+    assert drafting.MODELS_TIMEOUT == 15
 
 
 @pytest.mark.parametrize(

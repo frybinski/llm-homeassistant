@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT: Final = 120
+MODELS_TIMEOUT: Final = 15
 TASK_NAME: Final = "AI Drafts draft"
 
 # Only this is supported end to end in M1; the schema offers nothing else.
@@ -110,6 +111,28 @@ class ModelError(Exception):
         """Store the reason and, once known, the change set that records it."""
         super().__init__(message)
         self.change_set_id = change_set_id
+
+
+BASE_URL_HINT: Final = (
+    "The base URL must point at the server's OpenAI-compatible API. It usually "
+    "ends in /v1 (Ollama, LM Studio, OpenAI); for Open WebUI it is <server>/api."
+)
+
+
+class ModelListError(Exception):
+    """The server's model list could not be fetched."""
+
+
+class CannotConnectError(ModelListError):
+    """The server could not be reached, or did not answer in time."""
+
+
+class InvalidAuthError(ModelListError):
+    """The server rejected the API key (HTTP 401 or 403)."""
+
+
+class NotOpenAICompatibleError(ModelListError):
+    """The address answers, but not with an OpenAI-style model list."""
 
 
 class MalformedOutputError(Exception):
@@ -284,6 +307,16 @@ class OpenAICompatibleClient:
             if status == 400 and index == 0:
                 _LOGGER.debug("Server rejected json_schema, retrying with json_object")
                 continue
+            if status in (404, 405):
+                raise ModelError(
+                    f"the model server answered HTTP {status} for {self._url}. "
+                    f"{BASE_URL_HINT}"
+                )
+            if status in (401, 403):
+                raise ModelError(
+                    f"the model server rejected the API key (HTTP {status}); "
+                    "check the API key in the integration's settings"
+                )
             if not 200 <= status < 300:
                 raise ModelError(
                     f"the model server answered HTTP {status}: {body[:200]}"
@@ -319,6 +352,50 @@ class OpenAICompatibleClient:
         if not isinstance(content, str):
             raise ModelError("the model server's answer has no text content")
         return content
+
+
+async def async_list_models(
+    hass: HomeAssistant, base_url: str, api_key: str | None = None
+) -> list[str]:
+    """Return the model ids of ``GET {base_url}/models``.
+
+    The list may be empty. Raises CannotConnectError, InvalidAuthError or
+    NotOpenAICompatibleError; none of their messages contains the API key.
+    """
+    url = f"{base_url.rstrip('/')}/models"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    session = async_get_clientsession(hass)
+    try:
+        async with asyncio.timeout(MODELS_TIMEOUT):
+            response = await session.get(url, headers=headers)
+            async with response:
+                status, body = response.status, await response.text()
+    except TimeoutError:
+        raise CannotConnectError(
+            f"no answer from {url} within {MODELS_TIMEOUT} seconds"
+        ) from None
+    except (ClientError, OSError) as err:
+        raise CannotConnectError(f"could not reach {url}: {err}") from None
+    if status in (401, 403):
+        raise InvalidAuthError(f"{url} answered HTTP {status}")
+    if status in (404, 405):
+        raise NotOpenAICompatibleError(f"{url} answered HTTP {status}")
+    if not 200 <= status < 300:
+        raise CannotConnectError(f"{url} answered HTTP {status}")
+    try:
+        entries = json.loads(body)["data"]
+        if not isinstance(entries, list):
+            raise TypeError
+    except ValueError, KeyError, TypeError:
+        raise NotOpenAICompatibleError(
+            f"{url} did not answer with a model list"
+        ) from None
+    models: list[str] = []
+    for entry in entries:
+        model_id = entry.get("id") if isinstance(entry, dict) else None
+        if isinstance(model_id, str) and model_id and model_id not in models:
+            models.append(model_id)
+    return models
 
 
 def build_ai_task_structure() -> vol.Schema:

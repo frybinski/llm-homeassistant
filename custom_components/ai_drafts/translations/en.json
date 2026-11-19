@@ -21,24 +21,44 @@
       },
       "openai_compatible": {
         "title": "Use an OpenAI-compatible server",
-        "description": "**Data that leaves your installation:** with every request, AI Drafts sends your request text together with the names, IDs and states of the entities, devices and areas it considers relevant, and the existing automations, to the server at the address below. If that server is on your own network, the data stays there. If it is a cloud service, the data is sent over the internet to that provider.\n\nThe connection is not tested in this step.",
+        "description": "**Data that leaves your installation:** with every request, AI Drafts sends your request text together with the names, IDs and states of the entities, devices and areas it considers relevant, and the existing automations, to the server at the address below. If that server is on your own network, the data stays there. If it is a cloud service, the data is sent over the internet to that provider.\n\nThe connection is tested when you continue: AI Drafts asks the server for its list of models.",
         "data": {
           "base_url": "Base URL",
-          "api_key": "API key",
+          "api_key": "API key"
+        },
+        "data_description": {
+          "base_url": "The address of the OpenAI-compatible API. Usually it ends in /v1, for example http://localhost:11434/v1 for Ollama. For Open WebUI use https://<server>/api.",
+          "api_key": "Optional. Local servers such as Ollama usually need none. Open WebUI needs an API key from your account settings."
+        }
+      },
+      "reconfigure": {
+        "title": "AI Drafts: change the model source",
+        "description": "Choose where the model comes from. The current settings are pre-filled in the next step. Your drafts and change sets are kept.",
+        "menu_options": {
+          "ai_task": "Home Assistant AI Task",
+          "openai_compatible": "OpenAI-compatible server (for example Ollama)"
+        }
+      },
+      "openai_model": {
+        "title": "Choose the model",
+        "description": "**Data that leaves your installation:** with every request, AI Drafts sends your request text together with the names, IDs and states of the entities, devices and areas it considers relevant, and the existing automations, to the server at the address below. If that server is on your own network, the data stays there. If it is a cloud service, the data is sent over the internet to that provider.\n\nThe server answered. Pick one of its models, or type a name that is not listed. If the server lists no models, type the name.",
+        "data": {
           "model": "Model"
         },
         "data_description": {
-          "base_url": "For example http://localhost:11434/v1 for Ollama.",
-          "api_key": "Optional. Local servers such as Ollama usually need none.",
           "model": "Name of the model to use, for example llama3.1."
         }
       }
     },
     "error": {
-      "invalid_url": "This is not a valid URL. Include the scheme, for example http://localhost:11434/v1."
+      "invalid_url": "This is not a valid URL. Include the scheme, for example http://localhost:11434/v1.",
+      "cannot_connect": "The server could not be reached. Check the address, that the server is running and that Home Assistant can reach it.",
+      "invalid_auth": "The server rejected the API key. Check the key, or leave the field empty if the server needs none.",
+      "not_openai_compatible": "The server answered, but not with an OpenAI-compatible model list. The base URL must point at the OpenAI-compatible API. It usually ends in /v1 (Ollama, LM Studio, OpenAI); for Open WebUI it is <server>/api, not <server> or <server>/ollama."
     },
     "abort": {
-      "single_instance_allowed": "AI Drafts is already set up. Only one instance is allowed."
+      "single_instance_allowed": "AI Drafts is already set up. Only one instance is allowed.",
+      "reconfigure_successful": "The model source was changed and AI Drafts was reloaded."
     }
   }
 }

@@ -2,12 +2,13 @@
 """A stand-in for a language model, for developing AI Drafts without one.
 
 It is a tiny OpenAI-compatible server that answers ``POST /v1/chat/completions``
-with canned change sets, chosen by words in the user's request. With it the whole
+with canned change sets, chosen by words in the user's request, and
+``GET /v1/models`` with the one model ``fake``. With it the whole
 pipeline (context, checks, repair loop, apply, revert) can be exercised in a real
 Home Assistant instance. It says nothing about how a real model behaves.
 
 Run it, then add AI Drafts with the model source "OpenAI-compatible server",
-base URL ``http://127.0.0.1:11435/v1``, any model name, no API key::
+base URL ``http://127.0.0.1:11435/v1``, model ``fake`` (any name works), no API key::
 
     .venv/bin/python scripts/fake_model.py [--host 127.0.0.1] [--port 11435]
 
@@ -157,9 +158,22 @@ async def chat_completions(request: web.Request) -> web.Response:
     )
 
 
+async def list_models(request: web.Request) -> web.Response:
+    """Answer ``GET /v1/models`` with one model, ``fake``."""
+    return web.json_response(
+        {
+            "object": "list",
+            "data": [
+                {"id": "fake", "object": "model", "created": 0, "owned_by": "fake"}
+            ],
+        }
+    )
+
+
 def create_app() -> web.Application:
     """Create the web application."""
     app = web.Application()
+    app.router.add_get("/v1/models", list_models)
     app.router.add_post("/v1/chat/completions", chat_completions)
     return app
 

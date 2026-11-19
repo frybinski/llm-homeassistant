@@ -18,6 +18,23 @@ When model calls arrive, each request will send your request text plus the
 names, IDs and states of entities, devices, areas and existing automations to
 the model source you choose. The config flow states this before you decide.
 
+## Model servers
+
+With the source "OpenAI-compatible server" the base URL must point at the
+server's OpenAI-compatible API. The config flow tests it by asking the server
+for its models, and offers them in the next step. The source can be changed
+later under Settings, Devices & services, AI Drafts, Reconfigure.
+
+| Server | Base URL | API key |
+| --- | --- | --- |
+| Ollama | `http://<host>:11434/v1` | none |
+| Open WebUI | `https://<host>/api` | required, from the account settings |
+| LM Studio | `http://<host>:1234/v1` | none |
+| OpenAI | `https://api.openai.com/v1` | required |
+
+For Open WebUI, `/ollama` is a passthrough to Ollama's own API and does not
+work here.
+
 ## Development
 
 Requirements: Python 3.14, [uv](https://docs.astral.sh/uv/) (or `python3.14 -m venv`),

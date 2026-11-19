@@ -560,9 +560,22 @@ Nicht geprüft: die englische Oberfläche, der Weg über AI Task, ein langer Ent
 - **Modellfehler ohne Verweis.** Die Fehlermeldung nennt das fehlgeschlagene Change Set nur im Text. Es erscheint im Verlauf, ist aus der Meldung aber nicht anklickbar.
 - **Neuladen beim allerersten Besuch.** In einem frischen Browser lädt Home Assistant die Seite wenige Sekunden nach dem ersten Öffnen einmal neu. Eine bis dahin getippte Anfrage ist dann weg. Ein laufender Entwurf geht nicht verloren, er steht danach im Verlauf.
 
+### Einrichtung, nach dem ersten Versuch mit einem echten Server
+
+Der erste Versuch mit einem echten Modellserver scheiterte an der Basis-URL. Sie zeigte auf eine Adresse, die keine OpenAI-kompatible Schnittstelle ist, und die Einrichtung hatte sie ungeprüft angenommen. Seitdem gilt:
+
+- **Verbindungstest.** Die Einrichtung fragt beim Server die Modellliste ab, bevor sie weitergeht. Sie unterscheidet „nicht erreichbar“, „Schlüssel abgelehnt“ und „keine OpenAI-kompatible Schnittstelle“ und sagt im letzten Fall, was einzutragen ist.
+- **Modell aus der Liste.** Das Modell wird aus der Liste des Servers gewählt. Ein eigener Wert bleibt möglich.
+- **Neu konfigurieren.** Modellquelle, Adresse, Schlüssel und Modell lassen sich ändern, ohne die Integration zu löschen.
+- **Fehlermeldung beim Entwurf.** Bei 404 und 405 nennt sie die aufgerufene Adresse und gibt denselben Hinweis, bei 401 und 403 sagt sie, dass der Schlüssel abgelehnt wurde.
+
+Basis-URLs gängiger Server stehen in der README. Für Open WebUI ist es die Adresse des Servers gefolgt von `/api`, mit einem API-Schlüssel aus den Kontoeinstellungen.
+
 ### Zur Arbeitsweise
 
 Drei Tests liefen lokal durch und in der CI nicht. Home Assistant installiert beim Start der Dev-Instanz Pakete in die lokale Umgebung nach, die in `requirements_dev.txt` fehlten. Die Datei ist ergänzt. Änderungen am Backend werden seitdem zusätzlich in einer frisch aus `requirements_dev.txt` gebauten Umgebung getestet.
+
+`hassfest` lässt sich lokal nicht ausführen und läuft nur in der CI. Es lehnt unter anderem Übersetzungstexte mit spitzen Klammern ab. Nach Änderungen an `manifest.json` oder den Übersetzungen ist deshalb erst der CI-Lauf die Prüfung.
 
 ### Wie es weitergeht
 

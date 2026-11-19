@@ -115,7 +115,8 @@ class ModelError(Exception):
 
 BASE_URL_HINT: Final = (
     "The base URL must point at the server's OpenAI-compatible API. It usually "
-    "ends in /v1 (Ollama, LM Studio, OpenAI); for Open WebUI it is <server>/api."
+    "ends in /v1 (Ollama, LM Studio, OpenAI); for Open WebUI it is the server "
+    "address followed by /api."
 )
 
 

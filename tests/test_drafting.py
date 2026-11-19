@@ -272,7 +272,7 @@ async def test_openai_404_405_name_the_url_and_hint(
     assert f"HTTP {status}" in message
     assert "http://owui.test/ollama/chat/completions" in message
     assert "/v1" in message
-    assert "<server>/api" in message
+    assert "followed by /api" in message
     assert "sk-secret" not in message
 
 

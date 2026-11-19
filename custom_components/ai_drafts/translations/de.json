@@ -27,7 +27,7 @@
           "api_key": "API-Schlüssel"
         },
         "data_description": {
-          "base_url": "Die Adresse der OpenAI-kompatiblen API. Sie endet meist auf /v1, zum Beispiel http://localhost:11434/v1 für Ollama. Für Open WebUI verwenden Sie https://<Server>/api.",
+          "base_url": "Die Adresse der OpenAI-kompatiblen API. Sie endet meist auf /v1, zum Beispiel http://localhost:11434/v1 für Ollama. Für Open WebUI verwenden Sie die Adresse des Servers gefolgt von /api.",
           "api_key": "Optional. Lokale Server wie Ollama brauchen meist keinen. Open WebUI benötigt einen API-Schlüssel aus den Kontoeinstellungen."
         }
       },
@@ -54,7 +54,7 @@
       "invalid_url": "Das ist keine gültige URL. Geben Sie das Schema mit an, zum Beispiel http://localhost:11434/v1.",
       "cannot_connect": "Der Server ist nicht erreichbar. Prüfen Sie die Adresse, ob der Server läuft und ob Home Assistant ihn erreichen kann.",
       "invalid_auth": "Der Server hat den API-Schlüssel abgelehnt. Prüfen Sie den Schlüssel oder lassen Sie das Feld leer, wenn der Server keinen braucht.",
-      "not_openai_compatible": "Der Server hat geantwortet, aber nicht mit einer OpenAI-kompatiblen Modellliste. Die Basis-URL muss auf die OpenAI-kompatible API zeigen. Sie endet meist auf /v1 (Ollama, LM Studio, OpenAI); bei Open WebUI ist es <Server>/api, nicht <Server> oder <Server>/ollama."
+      "not_openai_compatible": "Der Server hat geantwortet, aber nicht mit einer OpenAI-kompatiblen Modellliste. Die Basis-URL muss auf die OpenAI-kompatible API zeigen. Sie endet meist auf /v1 (Ollama, LM Studio, OpenAI); bei Open WebUI ist es die Adresse des Servers gefolgt von /api, nicht die bloße Adresse und nicht /ollama."
     },
     "abort": {
       "single_instance_allowed": "AI Drafts ist bereits eingerichtet. Es ist nur eine Instanz erlaubt.",

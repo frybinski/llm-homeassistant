@@ -477,13 +477,14 @@ WebSocket-Kommandos, alle nur für Administratoren. Dienste gibt es keine; gesch
 
 | Kommando | Zweck |
 |---|---|
-| `ai_drafts/draft` mit `request` | Entwurf erzeugen und prüfen |
+| `ai_drafts/draft` mit `request`, wahlweise `model` | Entwurf erzeugen und prüfen, auf Wunsch mit einem anderen Modell als dem eingerichteten |
+| `ai_drafts/models` | Modelle der eingerichteten Quelle und der Standard |
 | `ai_drafts/changesets/list`, `ai_drafts/changesets/get` mit `change_set_id` | Change Sets lesen |
 | `ai_drafts/changesets/apply`, `discard`, `revert` mit `change_set_id` | Entscheiden; `apply` und `discard` nehmen zusätzlich `decided_in` und `views_opened` |
 | `ai_drafts/journal/list`, wahlweise mit `change_set_id` | Protokoll lesen |
 | `ai_drafts/info` | Version und Modellquelle |
 
-Fehlercodes: `not_loaded`, `not_found`, `wrong_state`, `apply_blocked`, `apply_failed`, `revert_refused`, `busy`, `model_error`.
+Fehlercodes: `not_loaded`, `not_found`, `wrong_state`, `apply_blocked`, `apply_failed`, `revert_refused`, `busy`, `model_error`, `invalid_model`.
 
 ### Teil 1: Festlegungen
 
@@ -568,6 +569,13 @@ Der erste Versuch mit einem echten Modellserver scheiterte an der Basis-URL. Sie
 - **Modell aus der Liste.** Das Modell wird aus der Liste des Servers gewählt. Ein eigener Wert bleibt möglich.
 - **Neu konfigurieren.** Modellquelle, Adresse, Schlüssel und Modell lassen sich ändern, ohne die Integration zu löschen.
 - **Fehlermeldung beim Entwurf.** Bei 404 und 405 nennt sie die aufgerufene Adresse und gibt denselben Hinweis, bei 401 und 403 sagt sie, dass der Schlüssel abgelehnt wurde.
+
+Der zweite Versuch gelang mit der richtigen Adresse. Dabei fiel auf, dass im Modell-Schritt keine Liste zu sehen war. Die Ursache ist nicht geklärt: Entweder meldete der Server keine Modelle, oder das Feld mit freier Eingabe war nicht als Liste erkennbar. Seitdem gilt:
+
+- **Modell-Schritt.** Meldet der Server Modelle, erscheint eine reine Auswahlliste, sonst ein Textfeld. Der Schritt nennt die Zahl der gemeldeten Modelle, damit beide Fälle unterscheidbar sind.
+- **Tolerantes Lesen.** Die Modellliste wird auch als bloße Liste oder unter `models` gelesen, die Kennung aus `id`, `model` oder `name`.
+- **Modellwechsel im Panel.** Neben dem Anfragefeld steht eine Auswahl mit den Modellen der Quelle. Das eingerichtete Modell ist vorausgewählt und als Standard markiert. Die Wahl gilt für die folgenden Entwürfe, solange das Panel offen ist, und ändert den Standard nicht. Bei der Quelle AI Task stehen dort die AI-Task-Entitäten.
+- **Modell im Verlauf.** Jeder Eintrag zeigt, welches Modell ihn erzeugt hat.
 
 Basis-URLs gängiger Server stehen in der README. Für Open WebUI ist es die Adresse des Servers gefolgt von `/api`, mit einem API-Schlüssel aus den Kontoeinstellungen.
 

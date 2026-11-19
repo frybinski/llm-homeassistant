@@ -702,6 +702,7 @@ class _Builder:
             path,
             consume=[place_in],
             produce=[self.control(DONE)],
+            annotations=[Annotation("otherwise", True)],
         )
         return True
 

@@ -192,7 +192,7 @@ the last one. The place before the first step is `triggered`, or
 | `choose`, `if` | One `branch` transition per alternative, carrying that alternative's conditions as read arcs and guards, then the alternative's steps, all ending in the place after the whole step. The default, or an implicit empty one, is a `branch` too. |
 | `parallel` | A `fork` producing the first place of every branch, the branches, and a `join` consuming their last places. |
 | `repeat` | See "Loops" below. |
-| `condition` as a step | A pair: a `check` transition onward carrying the condition, and a `stop` transition to `done` for when it does not hold. |
+| `condition` as a step | A pair: a `check` transition onward carrying the condition, and a `stop` transition to `done` for when it does not hold, with annotation `otherwise`. |
 | `stop` | `stop` transition to `done`. |
 | `variables`, `event`, `sequence`, `set_conversation_response` | `sequence` is flattened. `event` is a `skip` with annotation `fires_event`. The others are `skip`. |
 | Any other step | `skip`, opaque. |
@@ -302,9 +302,12 @@ These limits fall into two groups.
   automation that only has these is still `complete`.
 - **Recorded as opaque:** logic beyond "and", templates, indirection,
   blueprints that do not resolve, device triggers and actions, steps the
-  translation does not know, and steps that cannot be reached. Here the net is
-  missing structure. The automation's record lists each case and `complete` is
-  false.
+  translation does not know, and steps that cannot be reached. The same goes
+  for targets that cannot be turned into entities: an area, floor, label or
+  device that does not resolve, `entity_id: all`, and an entity or action name
+  given as a template. A `parallel` branch that ends the run is opaque too.
+  Here the net is missing structure. The automation's record lists each case
+  and `complete` is false.
 
 Findings of the conflict analysis that rest on an automation that is not
 `complete` are warnings, never errors.

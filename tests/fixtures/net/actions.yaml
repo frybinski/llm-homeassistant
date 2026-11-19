@@ -566,7 +566,7 @@ cases:
       transitions:
         <<: *time_t
         "t:x:actions[0]": {kind: check}
-        "t:x:actions[0]:stop": {kind: stop}
+        "t:x:actions[0]:stop": {kind: stop, annotations: [{otherwise: true}]}
         "t:x:actions[1]": {kind: action, annotations: [{action: light.turn_off}]}
       arcs:
         - "produce t:x:triggers[0] -> p:x:triggered"
